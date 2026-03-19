@@ -82,6 +82,16 @@ def main():
         print(f"ERROR: Path not found: {skill_abs_path}", file=sys.stderr)
         sys.exit(1)
 
+    # Self-audit detection: if auditing our own skill, run direct
+    # (sandbox can't detect self-audit because paths differ inside container)
+    this_skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        if os.path.samefile(skill_abs_path, this_skill_dir):
+            print("Self-audit detected — running direct (sandbox self-audit not supported)", file=sys.stderr)
+            sys.exit(run_direct(skill_abs_path, args.no_clawhub))
+    except (OSError, ValueError):
+        pass
+
     if args.no_sandbox:
         sys.exit(run_direct(skill_abs_path, args.no_clawhub))
 
