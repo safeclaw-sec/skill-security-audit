@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--text:#e0e0e0;--muted:#888;--green:#00ff88;--red:#ff4444;--yellow:#ffaa00;--blue:#4488ff;--glass:rgba(255,255,255,0.03)}
+:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--text:#e0e0e0;--muted:#888;--green:#00ff88;--red:#ff4444;--yellow:#ffaa00;--blue:#4488ff;--purple:#aa66ff;--glass:rgba(255,255,255,0.03)}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
 a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
@@ -79,6 +79,39 @@ section{padding:80px 0}
 .code-comment{color:#666}
 .code-cmd{color:var(--green)}
 
+/* ---- Sandbox section ---- */
+.sandbox-cascade{display:flex;flex-direction:column;gap:0;margin-top:32px;position:relative}
+.sandbox-cascade::before{content:'';position:absolute;left:28px;top:52px;bottom:52px;width:2px;background:linear-gradient(to bottom,var(--green),var(--blue),var(--purple),var(--yellow),var(--border));opacity:0.35}
+.sandbox-card{display:flex;gap:20px;align-items:flex-start;background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:20px 24px;position:relative;z-index:1;transition:border-color 0.2s}
+.sandbox-card+.sandbox-card{margin-top:12px}
+.sandbox-card:hover{border-color:rgba(255,255,255,0.12)}
+.sandbox-card.docker:hover{border-color:var(--green)}
+.sandbox-card.bwrap:hover{border-color:var(--blue)}
+.sandbox-card.firejail:hover{border-color:var(--purple)}
+.sandbox-card.sandbox-exec:hover{border-color:var(--yellow)}
+.sandbox-card.fallback:hover{border-color:var(--red)}
+.sandbox-num{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;flex-shrink:0;border:2px solid}
+.sandbox-card.docker .sandbox-num{border-color:var(--green);color:var(--green)}
+.sandbox-card.bwrap .sandbox-num{border-color:var(--blue);color:var(--blue)}
+.sandbox-card.firejail .sandbox-num{border-color:var(--purple);color:var(--purple)}
+.sandbox-card.sandbox-exec .sandbox-num{border-color:var(--yellow);color:var(--yellow)}
+.sandbox-card.fallback .sandbox-num{border-color:var(--muted);color:var(--muted)}
+.sandbox-info{flex:1}
+.sandbox-info h4{font-size:1rem;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.sandbox-info p{color:var(--muted);font-size:0.875rem;line-height:1.5}
+.sandbox-tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:0.72rem;font-weight:600;letter-spacing:0.3px}
+.tag-platform{background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border)}
+.tag-iso-strong{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.tag-iso-good{background:rgba(68,136,255,0.1);color:var(--blue);border:1px solid rgba(68,136,255,0.2)}
+.tag-iso-basic{background:rgba(255,170,0,0.1);color:var(--yellow);border:1px solid rgba(255,170,0,0.2)}
+.tag-iso-none{background:rgba(255,68,68,0.08);color:var(--red);border:1px solid rgba(255,68,68,0.2)}
+
+.sandbox-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:40px}
+.sandbox-note{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:20px}
+.sandbox-note h5{font-size:0.95rem;font-weight:600;margin-bottom:8px;color:var(--text)}
+.sandbox-note p{color:var(--muted);font-size:0.85rem;line-height:1.55}
+.sandbox-note .note-icon{font-size:1.4rem;margin-bottom:10px}
+
 /* Footer */
 footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:0.85rem}
 footer a{color:var(--green)}
@@ -89,6 +122,7 @@ footer p{margin:4px 0}
   .self-audit{padding:32px 20px}
   .results-table{font-size:0.85rem}
   .results-table th,.results-table td{padding:8px 10px}
+  .sandbox-cascade::before{display:none}
 }
 </style>
 </head>
@@ -96,7 +130,7 @@ footer p{margin:4px 0}
 
 <section class="hero">
   <div class="hero-content">
-    <div class="badge">Self-Auditable &mdash; Score 11/100 (SAFE)</div>
+    <div class="badge">Self-Auditable &mdash; Score 22/100 (SAFE)</div>
     <h1>Audit Before<br>You Install</h1>
     <p>824+ malicious skills found on ClawHub. Supply chain attacks are real. Know what you're installing.</p>
     <a href="https://github.com/safeclaw-sec/skill-security-audit" class="cta" target="_blank">View on GitHub &rarr;</a>
@@ -202,6 +236,103 @@ footer p{margin:4px 0}
   </div>
 </section>
 
+<!-- ======================================================= -->
+<!-- SANDBOX SECTION                                          -->
+<!-- ======================================================= -->
+<section>
+  <div class="container">
+    <h2 class="section-title">How Sandbox Works</h2>
+    <p class="section-sub">SafeClaw runs the audit in an isolated environment so the skill under test can't access your files, keys, or network. It auto-detects the best available runtime &mdash; no manual configuration needed.</p>
+
+    <div class="sandbox-cascade">
+
+      <div class="sandbox-card docker">
+        <div class="sandbox-num">1</div>
+        <div class="sandbox-info">
+          <h4>
+            Docker
+            <span class="sandbox-tag tag-platform">Linux &amp; macOS</span>
+            <span class="sandbox-tag tag-iso-strong">Strongest isolation</span>
+          </h4>
+          <p>Full container isolation with no network access, read-only filesystem, 256 MB memory cap, and 0.5 CPU limit. The skill runs in a minimal ephemeral image that is destroyed after the audit.</p>
+        </div>
+      </div>
+
+      <div class="sandbox-card bwrap">
+        <div class="sandbox-num">2</div>
+        <div class="sandbox-info">
+          <h4>
+            bubblewrap
+            <span class="sandbox-tag tag-platform">Linux</span>
+            <span class="sandbox-tag tag-iso-good">Good isolation</span>
+          </h4>
+          <p>Lightweight userspace sandbox &mdash; no root required. Unshares network and PID namespaces, mounts the skill directory read-only, and dies with the parent process. Install with <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green)">sudo apt install bubblewrap</code>.</p>
+        </div>
+      </div>
+
+      <div class="sandbox-card firejail">
+        <div class="sandbox-num">3</div>
+        <div class="sandbox-info">
+          <h4>
+            firejail
+            <span class="sandbox-tag tag-platform">Linux</span>
+            <span class="sandbox-tag tag-iso-good">Good isolation</span>
+          </h4>
+          <p>Established Linux sandboxing tool. Disables network access, uses a private /tmp, and mounts the skill read-only. Slightly heavier than bubblewrap but widely available and well-tested. Install with <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green)">sudo apt install firejail</code>.</p>
+        </div>
+      </div>
+
+      <div class="sandbox-card sandbox-exec">
+        <div class="sandbox-num">4</div>
+        <div class="sandbox-info">
+          <h4>
+            sandbox-exec
+            <span class="sandbox-tag tag-platform">macOS</span>
+            <span class="sandbox-tag tag-iso-basic">Basic isolation</span>
+          </h4>
+          <p>Native macOS sandbox utility &mdash; no installation required. Applies a deny-network policy that blocks all outbound connections during the audit. Lower overhead than Docker; available on every Mac since 10.5.</p>
+        </div>
+      </div>
+
+      <div class="sandbox-card fallback">
+        <div class="sandbox-num">&#x26a0;</div>
+        <div class="sandbox-info">
+          <h4>
+            Fallback
+            <span class="sandbox-tag tag-iso-none">No isolation</span>
+          </h4>
+          <p>When no sandbox is found, SafeClaw presents an interactive install helper that suggests the best option for your OS and shows the exact install commands. In non-interactive mode (CI, cron) it runs with a clear warning. Use <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green)">--no-sandbox</code> to skip explicitly.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sandbox-notes">
+      <div class="sandbox-note">
+        <div class="note-icon">&#x1f50d;</div>
+        <h5>Self-audit doesn't need a sandbox</h5>
+        <p>When you audit SafeClaw itself, the tool detects it's auditing its own code and runs directly &mdash; no sandbox needed. You can read every line of the 1,000+ line source before trusting it.</p>
+      </div>
+      <div class="sandbox-note">
+        <div class="note-icon">&#x1f6e0;</div>
+        <h5>No sandbox found? We help you install one</h5>
+        <p>SafeClaw suggests the best option for your OS and shows the exact install commands. You're never left guessing. Runs in CI without prompting &mdash; just emits a warning and continues.</p>
+      </div>
+      <div class="sandbox-note">
+        <div class="note-icon">&#x1fa9f;</div>
+        <h5>Windows support coming soon</h5>
+        <p>Windows is detected automatically. Until native sandbox support ships, audits run without isolation with a clear warning. WSL2 users can install bubblewrap or Docker and get full isolation today.</p>
+      </div>
+      <div class="sandbox-note">
+        <div class="note-icon">&#x26a1;</div>
+        <h5>Force a specific runtime</h5>
+        <p>Use <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green)">--sandbox docker|bwrap|firejail|sandbox-exec</code> to pin a specific runtime, or <code style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green)">--no-sandbox</code> to skip isolation entirely for trusted paths.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ======================================================= -->
+
 <section>
   <div class="container">
     <h2 class="section-title">Real Results</h2>
@@ -245,9 +376,9 @@ footer p{margin:4px 0}
     <div class="self-audit">
       <h3>Self-Auditable</h3>
       <p>A security tool you can't audit is a security risk itself. This tool is so rigorous it flags itself.</p>
-      <div class="self-score" style="color:var(--green)">11<span style="font-size:1.5rem;color:var(--muted)">/100</span></div>
+      <div class="self-score" style="color:var(--green)">22<span style="font-size:1.5rem;color:var(--muted)">/100</span></div>
       <div class="self-label">Self-audit score &mdash; SAFE</div>
-      <p style="margin-top:24px;font-size:0.9rem">Passes its own audit with score 11/100. The 3 findings are legitimate (reads files, makes HTTP requests for ClawHub lookup, generates reports). 1,013 lines of Python. Standard library only. No dependencies. Read every line in 30 minutes. MIT License.</p>
+      <p style="margin-top:24px;font-size:0.9rem">Passes its own audit with score 22/100. The findings are legitimate (reads files, makes HTTP requests for ClawHub lookup, generates reports, bulk filesystem ops in sandbox.py). 1,000+ lines of Python. Standard library only. No dependencies. Read every line in 30 minutes. MIT License.</p>
     </div>
   </div>
 </section>
@@ -259,36 +390,39 @@ footer p{margin:4px 0}
     <div class="code-block">
       <span class="code-comment"># Clone the repo</span><br>
       <span class="code-cmd">git clone https://github.com/safeclaw-sec/skill-security-audit.git</span><br><br>
-      <span class="code-comment"># Audit a local skill</span><br>
-      <span class="code-cmd">python3 scripts/audit.py /path/to/any/skill</span><br><br>
-      <span class="code-comment"># Audit with offline mode (no ClawHub lookup)</span><br>
+      <span class="code-comment"># Audit a skill — auto-picks best sandbox</span><br>
+      <span class="code-cmd">python3 scripts/sandbox.py /path/to/any/skill</span><br><br>
+      <span class="code-comment"># Force Docker sandbox explicitly</span><br>
+      <span class="code-cmd">python3 scripts/sandbox.py /path/to/skill --sandbox docker</span><br><br>
+      <span class="code-comment"># Audit without sandbox (trusted paths)</span><br>
+      <span class="code-cmd">python3 scripts/sandbox.py /path/to/skill --no-sandbox</span><br><br>
+      <span class="code-comment"># Direct audit (no sandbox wrapper)</span><br>
       <span class="code-cmd">python3 scripts/audit.py /path/to/skill --no-clawhub</span><br><br>
-      <span class="code-comment"># Self-audit (verify integrity)</span><br>
-      <span class="code-cmd">python3 scripts/audit.py . --no-clawhub</span>
+      <span class="code-comment"># Self-audit (verify integrity — sandbox auto-skipped)</span><br>
+      <span class="code-cmd">python3 scripts/sandbox.py .</span>
     </div>
   </div>
 </section>
 
-
 <section>
   <div class="container">
     <h2 class="section-title">The Self-Audit Paradox</h2>
-    <p class="section-sub">When you run this tool against itself, it returns score 100/100 (DANGEROUS). This is expected and correct.</p>
+    <p class="section-sub">When you run this tool against itself, some findings are expected. This is correct behavior &mdash; the same way a virus scanner contains virus signatures.</p>
     <div class="problem-grid">
       <div class="problem-card" style="border-color:var(--yellow)">
-        <div class="problem-num" style="color:var(--green)">11</div>
+        <div class="problem-num" style="color:var(--green)">22</div>
         <h3>Self-Audit Score</h3>
-        <p>The tool contains regex patterns matching malicious signatures and example reports with real evidence. Like a virus scanner contains virus signatures.</p>
+        <p>The tool contains regex patterns matching malicious signatures and audit scripts with broad filesystem access. Expected. Like a virus scanner containing virus signatures.</p>
       </div>
       <div class="problem-card" style="border-color:var(--green)">
         <div class="problem-num" style="color:var(--green)">0</div>
         <h3>Actual Threats</h3>
-        <p>Read the 1,013 lines of source. No network access, no file writes, no env access. Every finding is a pattern definition, not an actual threat.</p>
+        <p>Read the source. No network writes, no credential access, no data exfiltration. Every finding is a pattern definition or a legitimate audit operation, not an actual threat.</p>
       </div>
       <div class="problem-card" style="border-color:var(--blue)">
         <div class="problem-num" style="color:var(--blue)">&#x221e;</div>
         <h3>Transparency</h3>
-        <p>The same paradox exists in every security tool. The solution is always radical transparency. Read the code. Verify yourself.</p>
+        <p>The same paradox exists in every security tool. The solution is radical transparency. Read the code. Verify yourself. That's why we publish every line under MIT.</p>
       </div>
     </div>
   </div>
