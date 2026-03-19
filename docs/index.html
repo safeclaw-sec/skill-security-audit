@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeClaw — Audit Before You Install</title>
+<meta name="description" content="Security audit tool for OpenClaw skills. Detects prompt injection, data exfiltration, malicious code. Score 0-100.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--text:#e0e0e0;--muted:#888;--green:#00ff88;--red:#ff4444;--yellow:#ffaa00;--blue:#4488ff;--glass:rgba(255,255,255,0.03)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+a{color:var(--green);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+/* Hero */
+.hero{min-height:90vh;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,0.06) 0%,transparent 70%);top:-200px;right:-100px;pointer-events:none}
+.hero::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(255,68,68,0.04) 0%,transparent 70%);bottom:-200px;left:-100px;pointer-events:none}
+.hero-content{position:relative;z-index:1}
+.badge{display:inline-block;padding:6px 16px;border:1px solid var(--green);border-radius:20px;font-size:0.8rem;color:var(--green);margin-bottom:24px;letter-spacing:0.5px}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;line-height:1.1;margin-bottom:16px;background:linear-gradient(135deg,#fff 0%,#ccc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.2rem;color:var(--muted);max-width:600px;margin:0 auto 32px}
+.cta{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;background:var(--green);color:#000;font-weight:600;border-radius:8px;font-size:1rem;transition:all 0.2s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,136,0.2);text-decoration:none}
+
+/* Sections */
+section{padding:80px 0}
+.section-title{font-size:2rem;font-weight:700;margin-bottom:12px}
+.section-sub{color:var(--muted);font-size:1.05rem;margin-bottom:48px;max-width:650px}
+
+/* Problem */
+.problem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.problem-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:24px;transition:border-color 0.2s}
+.problem-card:hover{border-color:var(--red)}
+.problem-num{font-size:2.5rem;font-weight:800;color:var(--red);line-height:1}
+.problem-card h3{margin:12px 0 8px;font-size:1.1rem}
+.problem-card p{color:var(--muted);font-size:0.9rem}
+
+/* How it works */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.step{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;position:relative}
+.step-num{width:48px;height:48px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#000;margin:0 auto 16px}
+.step h3{font-size:1.2rem;margin-bottom:8px}
+.step p{color:var(--muted);font-size:0.9rem}
+
+/* Detection grid */
+.detect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.detect-card{background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;gap:14px;align-items:flex-start;transition:border-color 0.2s}
+.detect-card:hover{border-color:var(--yellow)}
+.detect-icon{font-size:1.5rem;flex-shrink:0;width:36px;text-align:center}
+.detect-card h4{font-size:0.95rem;margin-bottom:4px}
+.detect-card p{color:var(--muted);font-size:0.85rem}
+
+/* Results table */
+.results-table{width:100%;border-collapse:collapse;margin-top:24px}
+.results-table th{text-align:left;padding:12px 16px;border-bottom:2px solid var(--border);font-weight:600;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)}
+.results-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:0.95rem}
+.results-table tr:hover{background:var(--glass)}
+.score-safe{color:var(--green);font-weight:700}
+.score-risk{color:var(--yellow);font-weight:700}
+.score-danger{color:var(--red);font-weight:700}
+.level-badge{display:inline-block;padding:2px 10px;border-radius:4px;font-size:0.8rem;font-weight:600}
+.level-safe{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.level-risk{background:rgba(255,170,0,0.1);color:var(--yellow);border:1px solid rgba(255,170,0,0.2)}
+.level-danger{background:rgba(255,68,68,0.1);color:var(--red);border:1px solid rgba(255,68,68,0.2)}
+
+/* Self audit */
+.self-audit{background:linear-gradient(135deg,rgba(0,255,136,0.03),rgba(68,136,255,0.03));border:1px solid var(--border);border-radius:16px;padding:48px;text-align:center;margin-top:24px}
+.self-audit h3{font-size:1.8rem;margin-bottom:12px}
+.self-audit p{color:var(--muted);max-width:550px;margin:0 auto 24px}
+.self-score{font-size:4rem;font-weight:800;color:var(--green);line-height:1}
+.self-label{color:var(--muted);font-size:0.9rem;margin-top:4px}
+
+/* Code block */
+.code-block{background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:20px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;overflow-x:auto;margin-top:16px;line-height:1.8}
+.code-comment{color:#666}
+.code-cmd{color:var(--green)}
+
+/* Footer */
+footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:0.85rem}
+footer a{color:var(--green)}
+footer p{margin:4px 0}
+
+@media(max-width:768px){
+  section{padding:48px 0}
+  .self-audit{padding:32px 20px}
+  .results-table{font-size:0.85rem}
+  .results-table th,.results-table td{padding:8px 10px}
+}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-content">
+    <div class="badge">Self-Auditable &mdash; Score 0/100</div>
+    <h1>Audit Before<br>You Install</h1>
+    <p>824+ malicious skills found on ClawHub. Supply chain attacks are real. Know what you're installing.</p>
+    <a href="https://github.com/safeclaw-sec/skill-security-audit" class="cta" target="_blank">View on GitHub &rarr;</a>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">The Problem</h2>
+    <p class="section-sub">AI agent skill marketplaces are the new attack surface. Would you install an npm package without checking? Why install an AI skill without auditing?</p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-num">824+</div>
+        <h3>Malicious Skills</h3>
+        <p>Found on ClawHub as of February 2026. Growing every week.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-num">1</div>
+        <h3>Coordinated Campaign</h3>
+        <p>ClawHavoc planted Atomic Stealer (macOS infostealer) inside innocent-looking skills.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-num">0</div>
+        <h3>Built-in Protection</h3>
+        <p>No mandatory audit before installation. Skills run with full agent permissions by default.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-sub">Three steps. No API keys needed. Works offline.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Point</h3>
+        <p>Give it a path to any OpenClaw skill &mdash; local directory or ClawHub name.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Scan</h3>
+        <p>Analyzes SKILL.md, scripts, dependencies, and network access. 6 categories, 30+ checks.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Score</h3>
+        <p>Returns a 0-100 risk score with a clear recommendation: INSTALL or DO NOT INSTALL.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">What It Detects</h2>
+    <p class="section-sub">Six categories of threat analysis covering the most common attack vectors in AI agent skills.</p>
+    <div class="detect-grid">
+      <div class="detect-card">
+        <div class="detect-icon">&#x1f6a8;</div>
+        <div>
+          <h4>Prompt Injection</h4>
+          <p>Hidden instructions in SKILL.md to exfiltrate data, bypass security rules, or impersonate system prompts.</p>
+        </div>
+      </div>
+      <div class="detect-card">
+        <div class="detect-icon">&#x1f510;</div>
+        <div>
+          <h4>Data Exfiltration</h4>
+          <p>Code that reads API keys, tokens, .env files, or credentials and sends them to external servers.</p>
+        </div>
+      </div>
+      <div class="detect-card">
+        <div class="detect-icon">&#x1f4a3;</div>
+        <div>
+          <h4>Malicious Code</h4>
+          <p>eval(), exec(), unsanitized subprocess, crypto miners, websocket listeners, post-install hooks.</p>
+        </div>
+      </div>
+      <div class="detect-card">
+        <div class="detect-icon">&#x1f50d;</div>
+        <div>
+          <h4>Typosquatting</h4>
+          <p>Dependencies with names similar to popular packages (e.g., "requets" instead of "requests").</p>
+        </div>
+      </div>
+      <div class="detect-card">
+        <div class="detect-icon">&#x1f310;</div>
+        <div>
+          <h4>Network Abuse</h4>
+          <p>Connections to suspicious domains like ngrok, requestbin, or undocumented external APIs.</p>
+        </div>
+      </div>
+      <div class="detect-card">
+        <div class="detect-icon">&#x1f575;</div>
+        <div>
+          <h4>System Reconnaissance</h4>
+          <p>Collection of hostname, IP address, username, platform info, or filesystem structure.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">Real Results</h2>
+    <p class="section-sub">Tested against real-world skills &mdash; including two that were actually malicious and removed from production.</p>
+    <table class="results-table">
+      <thead>
+        <tr><th>Skill</th><th>Score</th><th>Level</th><th>Key Findings</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>safe-skill (minimal)</td>
+          <td class="score-safe">0/100</td>
+          <td><span class="level-badge level-safe">SAFE</span></td>
+          <td>Clean &mdash; no findings</td>
+        </tr>
+        <tr>
+          <td>scrapling-official</td>
+          <td class="score-safe">15/100</td>
+          <td><span class="level-badge level-safe">SAFE</span></td>
+          <td>1 LOW &mdash; test domain (legitimate)</td>
+        </tr>
+        <tr>
+          <td>browser-automation</td>
+          <td class="score-risk">59/100</td>
+          <td><span class="level-badge level-risk">RISK</span></td>
+          <td>CDP exposed on 0.0.0.0, socket bind, system info collection</td>
+        </tr>
+        <tr>
+          <td>email-daily-summary</td>
+          <td class="score-danger">100/100</td>
+          <td><span class="level-badge level-danger">DANGEROUS</span></td>
+          <td>Prompt injection, API key harvesting, base64 exfiltration</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="self-audit">
+      <h3>Self-Auditable</h3>
+      <p>A security tool you can't audit is a security risk itself. This tool passes its own audit.</p>
+      <div class="self-score">0<span style="font-size:1.5rem;color:var(--muted)">/100</span></div>
+      <div class="self-label">Self-audit score</div>
+      <p style="margin-top:24px;font-size:0.9rem">1,013 lines of Python. Standard library only. No dependencies. Read the entire source in 30 minutes. MIT License.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">Quick Start</h2>
+    <p class="section-sub">No API keys. No installation. Just Python 3.8+.</p>
+    <div class="code-block">
+      <span class="code-comment"># Clone the repo</span><br>
+      <span class="code-cmd">git clone https://github.com/safeclaw-sec/skill-security-audit.git</span><br><br>
+      <span class="code-comment"># Audit a local skill</span><br>
+      <span class="code-cmd">python3 scripts/audit.py /path/to/any/skill</span><br><br>
+      <span class="code-comment"># Audit with offline mode (no ClawHub lookup)</span><br>
+      <span class="code-cmd">python3 scripts/audit.py /path/to/skill --no-clawhub</span><br><br>
+      <span class="code-comment"># Self-audit (verify integrity)</span><br>
+      <span class="code-cmd">python3 scripts/audit.py . --no-clawhub</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p><strong>SafeClaw Security</strong></p>
+    <p>Born from real-world experience with 50+ production skills.</p>
+    <p style="margin-top:12px"><a href="https://github.com/safeclaw-sec/skill-security-audit" target="_blank">GitHub</a> &nbsp;&middot;&nbsp; MIT License &nbsp;&middot;&nbsp; 2026</p>
+  </div>
+</footer>
+
+</body>
+</html>
