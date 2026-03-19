@@ -134,6 +134,46 @@ Recommendation: INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL
 When the user asks for deeper analysis, use the two-step intent pipeline.
 This uses YOUR OWN model — no external API calls or API keys required.
 
+### LLM Disclaimer (MANDATORY before intent analysis)
+
+Before running intent analysis, you MUST inform the user:
+
+1. **Which model will be used**: State your current model name and version
+2. **Confidence level**: Look up the model in this table and tell the user
+
+| Model | Accuracy Estimate | Context Window Reliability | Best For |
+|-------|------------------|---------------------------|----------|
+| Claude Opus 4.6 | ~90% | Reliable up to 100k tokens | Most thorough analysis — recommended |
+| Claude Sonnet 4.6 | ~85% | Reliable up to 60k tokens | Good balance of speed and accuracy |
+| Claude Sonnet 4.5 | ~82% | Reliable up to 50k tokens | Acceptable for most skills |
+| Claude Haiku 4.5 | ~70% | Reliable up to 20k tokens | Fast but may miss subtle attacks |
+| GPT-4o | ~85% | Reliable up to 60k tokens | Strong reasoning, good alternative |
+| GPT-4o mini | ~70% | Reliable up to 30k tokens | Budget option, lower accuracy |
+| Gemini 3 Pro | ~80% | Reliable up to 200k tokens | Best for very large skills |
+| Gemini 3 Flash | ~75% | Reliable up to 100k tokens | Fast, good for large skills |
+| DeepSeek V3 | ~65% | Reliable up to 30k tokens | Budget, may miss nuanced attacks |
+| Llama 70B (local) | ~70% | Reliable up to 30k tokens | Private but less accurate |
+| Llama 7B (local) | ~50% | Reliable up to 4k tokens | Not recommended for security audit |
+
+3. **Skill size vs model window**: If the skill has more tokens than the model's reliable window, WARN:
+   "This skill has X tokens. Your model is reliable up to Y tokens. Analysis confidence is reduced. Consider using a model with a larger context window, or the chunked analysis will be applied automatically."
+
+4. **Example disclaimer**:
+   ```
+   Intent analysis will use Claude Opus 4.6 (accuracy ~90%).
+   Skill size: 3,200 tokens — well within reliable window (100k).
+   Analysis confidence: HIGH.
+   Proceeding with intent classification...
+   ```
+
+   Or for a weaker model:
+   ```
+   Intent analysis will use Haiku 4.5 (accuracy ~70%).
+   Skill size: 45,000 tokens — EXCEEDS reliable window (20k).
+   Analysis confidence: LOW — chunked analysis applied (3 chunks).
+   Consider re-running with Opus or Sonnet for higher accuracy.
+   ```
+
 ### When to use intent analysis
 - Skill has MEDIUM or higher findings and you want to separate real threats from false positives
 - User explicitly asks for "intent analysis" or "deep audit"
