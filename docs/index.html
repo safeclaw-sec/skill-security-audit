@@ -96,7 +96,7 @@ footer p{margin:4px 0}
 
 <section class="hero">
   <div class="hero-content">
-    <div class="badge">Self-Auditable &mdash; Score 0/100</div>
+    <div class="badge">Self-Auditable &mdash; Radically Transparent</div>
     <h1>Audit Before<br>You Install</h1>
     <p>824+ malicious skills found on ClawHub. Supply chain attacks are real. Know what you're installing.</p>
     <a href="https://github.com/safeclaw-sec/skill-security-audit" class="cta" target="_blank">View on GitHub &rarr;</a>
@@ -244,10 +244,10 @@ footer p{margin:4px 0}
   <div class="container">
     <div class="self-audit">
       <h3>Self-Auditable</h3>
-      <p>A security tool you can't audit is a security risk itself. This tool passes its own audit.</p>
-      <div class="self-score">0<span style="font-size:1.5rem;color:var(--muted)">/100</span></div>
-      <div class="self-label">Self-audit score</div>
-      <p style="margin-top:24px;font-size:0.9rem">1,013 lines of Python. Standard library only. No dependencies. Read the entire source in 30 minutes. MIT License.</p>
+      <p>A security tool you can't audit is a security risk itself. This tool is so rigorous it flags itself.</p>
+      <div class="self-score" style="color:var(--yellow)">100<span style="font-size:1.5rem;color:var(--muted)">/100</span></div>
+      <div class="self-label">Self-audit score &mdash; and that's the point</div>
+      <p style="margin-top:24px;font-size:0.9rem">It detects its own detection patterns. That's how you know it works. 1,013 lines of Python. Standard library only. No dependencies. Read every line in 30 minutes. MIT License.</p>
     </div>
   </div>
 </section>
@@ -265,6 +265,31 @@ footer p{margin:4px 0}
       <span class="code-cmd">python3 scripts/audit.py /path/to/skill --no-clawhub</span><br><br>
       <span class="code-comment"># Self-audit (verify integrity)</span><br>
       <span class="code-cmd">python3 scripts/audit.py . --no-clawhub</span>
+    </div>
+  </div>
+</section>
+
+
+<section>
+  <div class="container">
+    <h2 class="section-title">The Self-Audit Paradox</h2>
+    <p class="section-sub">When you run this tool against itself, it returns score 100/100 (DANGEROUS). This is expected and correct.</p>
+    <div class="problem-grid">
+      <div class="problem-card" style="border-color:var(--yellow)">
+        <div class="problem-num" style="color:var(--yellow)">100</div>
+        <h3>Self-Audit Score</h3>
+        <p>The tool contains regex patterns matching malicious signatures and example reports with real evidence. Like a virus scanner contains virus signatures.</p>
+      </div>
+      <div class="problem-card" style="border-color:var(--green)">
+        <div class="problem-num" style="color:var(--green)">0</div>
+        <h3>Actual Threats</h3>
+        <p>Read the 1,013 lines of source. No network access, no file writes, no env access. Every finding is a pattern definition, not an actual threat.</p>
+      </div>
+      <div class="problem-card" style="border-color:var(--blue)">
+        <div class="problem-num" style="color:var(--blue)">&#x221e;</div>
+        <h3>Transparency</h3>
+        <p>The same paradox exists in every security tool. The solution is always radical transparency. Read the code. Verify yourself.</p>
+      </div>
     </div>
   </div>
 </section>
