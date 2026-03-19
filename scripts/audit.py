@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import json
+import math
 import base64
 import pathlib
 import argparse
@@ -175,6 +176,10 @@ CODE_PATTERNS = [
     (r"open\s*\(['\"](?:/etc/|/proc/|/sys/|/root/|~/.ssh|~/.aws|~/.config/google)", "CRITICAL", "Accessing sensitive system files"),
     (r"open\s*\(['\"].*?(\.\./){2,}", "HIGH", "Path traversal (../../) in file open"),
     (r"shutil\.(rmtree|move|copy.*?)\s*\(['\"](?:/etc|/usr|/var|/home|/root)", "CRITICAL", "Modifying critical system directories"),
+
+    # Anti-audit evasion
+    (r"(sys\.argv|__file__|os\.path\.basename).*?(audit|scan|check|security|safeclaw)", "HIGH", "Conditional behavior: code checks if being audited (may behave differently during audit)"),
+    (r"if\s+.*?(audit|scanner|security|safeclaw)\s+.*?(in|==|!=)", "HIGH", "Anti-audit evasion: conditional behavior based on audit context"),
 ]
 
 # Network / URL patterns
@@ -237,6 +242,40 @@ KNOWN_PIP = {
     "markdownify", "ipython", "anyio", "msgspec", "cssselect", "orjson",
     "tld", "w3lib", "typing-extensions", "apify-client",
 }
+
+
+# Magic bytes for binary/archive detection
+DANGEROUS_MAGIC = {
+    b'\x7fELF':         'ELF executable (Linux)',
+    b'MZ':              'PE executable (Windows)',
+    b'\xfe\xed\xfa':    'Mach-O executable (macOS)',
+    b'\xcf\xfa\xed\xfe':'Mach-O 64-bit (macOS)',
+    b'\xca\xfe\xba\xbe':'Java class / Mach-O fat binary',
+}
+
+ARCHIVE_MAGIC = {
+    b'PK\x03\x04':       'ZIP archive',
+    b'PK\x05\x06':       'ZIP archive (empty)',
+    b'\x1f\x8b':         'GZIP archive',
+    b'BZ':               'BZIP2 archive',
+    b'\xfd7zXZ\x00':     'XZ archive',
+    b'Rar!':             'RAR archive',
+}
+
+IMAGE_MAGIC = {
+    '.png':  b'\x89PNG',
+    '.jpg':  b'\xff\xd8\xff',
+    '.jpeg': b'\xff\xd8\xff',
+    '.gif':  b'GIF8',
+    '.webp': b'RIFF',
+    '.ico':  b'\x00\x00\x01\x00',
+    '.bmp':  b'BM',
+}
+
+IMAGE_EXTENSIONS = set(IMAGE_MAGIC.keys()) | {'.svg'}
+ARCHIVE_EXTENSIONS = {'.zip', '.tar', '.gz', '.tgz', '.bz2', '.xz', '.rar', '.7z'}
+BINARY_EXTENSIONS  = {'.exe', '.dll', '.so', '.dylib', '.bin', '.class'}
+HIGH_ENTROPY_EXTENSIONS = {'.bin', '.dat', '.raw', ''}  # no extension included
 
 
 # ─────────────────────────────────────────────
@@ -375,6 +414,119 @@ def _build_code_block_map(lines: List[str]) -> List[bool]:
         else:
             result_map.append(in_code)
     return result_map
+
+
+def _read_magic_bytes(path: str, n: int = 8) -> Optional[bytes]:
+    """Read the first n bytes of a file for magic-byte detection."""
+    try:
+        with open(path, "rb") as f:
+            return f.read(n)
+    except Exception:
+        return None
+
+
+def _shannon_entropy(data: bytes) -> float:
+    """Compute Shannon entropy (0.0–8.0) for a byte sequence."""
+    if not data:
+        return 0.0
+    freq = [0] * 256
+    for b in data:
+        freq[b] += 1
+    length = len(data)
+    return -sum((f / length) * math.log2(f / length) for f in freq if f > 0)
+
+
+def audit_binary_file(result: AuditResult, filepath: str, rel_path: str):
+    """
+    Check binary/image files for 5 attack vectors:
+    1. Compiled executable magic bytes (ELF, PE, Mach-O) → CRITICAL
+    2. Extension/magic-byte mismatch (disguised executables) → CRITICAL / MEDIUM
+    3. Archive files (ZIP, GZIP, BZIP2, XZ, RAR) → HIGH
+    4. Oversized images > 2 MB (steganography) → MEDIUM
+    5. High Shannon entropy > 7.5/8.0 (encrypted/obfuscated payload) → MEDIUM
+    """
+    ext = pathlib.Path(filepath).suffix.lower()
+    magic = _read_magic_bytes(filepath, n=8)
+
+    if magic is None:
+        return
+
+    # ── Check 1: Compiled executable magic bytes — regardless of extension ──
+    for sig, desc in DANGEROUS_MAGIC.items():
+        if magic.startswith(sig):
+            result.findings.append(Finding(
+                severity="CRITICAL",
+                vector="Binary Executable",
+                description=f"Compiled executable found: {rel_path} — {desc}. Skills should not contain compiled binaries.",
+                file=rel_path,
+            ))
+            # Still continue to check extension mismatch below (don't return early)
+            break
+
+    # ── Check 3: Archive magic bytes — regardless of extension ──
+    for sig, desc in ARCHIVE_MAGIC.items():
+        if magic.startswith(sig):
+            result.findings.append(Finding(
+                severity="HIGH",
+                vector="Archive File",
+                description=f"{desc} found: {rel_path} — archives may contain hidden executables or payloads",
+                file=rel_path,
+            ))
+            break
+
+    # ── Check 2: Image extension vs actual content ──
+    if ext in IMAGE_MAGIC and ext != '.svg':
+        expected = IMAGE_MAGIC[ext]
+        if expected and not magic.startswith(expected):
+            # Is it a disguised executable?
+            for sig, desc in DANGEROUS_MAGIC.items():
+                if magic.startswith(sig):
+                    result.findings.append(Finding(
+                        severity="CRITICAL",
+                        vector="Disguised Executable",
+                        description=f"{ext} file is actually {desc}: {rel_path} — possible trojan",
+                        file=rel_path,
+                    ))
+                    break
+            else:
+                # Header mismatch but not a known executable — still suspicious
+                result.findings.append(Finding(
+                    severity="MEDIUM",
+                    vector="Magic Mismatch",
+                    description=f"{ext} file has unexpected header bytes: {rel_path} — verify file integrity",
+                    file=rel_path,
+                ))
+
+    # ── Check 4: Oversized image (> 2 MB) — steganographic payload ──
+    if ext in IMAGE_EXTENSIONS:
+        try:
+            size = os.path.getsize(filepath)
+            if size > 2 * 1024 * 1024:
+                result.findings.append(Finding(
+                    severity="MEDIUM",
+                    vector="Large Image",
+                    description=f"Image file is {size // 1024} KB: {rel_path} — unusually large, may contain steganographic payload",
+                    file=rel_path,
+                ))
+        except OSError:
+            pass
+
+    # ── Check 5: High Shannon entropy — encrypted/obfuscated binary ──
+    try:
+        file_size = os.path.getsize(filepath)
+        if ext in HIGH_ENTROPY_EXTENSIONS or file_size > 100_000:
+            raw = _read_magic_bytes(filepath, n=10_000)
+            if raw:
+                entropy = _shannon_entropy(raw)
+                if entropy > 7.5:
+                    result.findings.append(Finding(
+                        severity="MEDIUM",
+                        vector="High Entropy Binary",
+                        description=f"File has entropy {entropy:.1f}/8.0: {rel_path} — likely encrypted or compressed payload",
+                        file=rel_path,
+                    ))
+    except OSError:
+        pass
 
 
 def audit_skill_md(result: AuditResult, content: str, filepath: str):
@@ -825,11 +977,39 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
     # Record how many findings exist before pattern scanning (for structural distribution check)
     pre_scan_count = len(result.findings)
 
+    # ── Git hooks detection ──
+    hooks_dir = os.path.join(skill_path, ".git", "hooks")
+    if os.path.isdir(hooks_dir):
+        for hook in os.listdir(hooks_dir):
+            hook_path = os.path.join(hooks_dir, hook)
+            if os.access(hook_path, os.X_OK) or hook.endswith(('.sh', '.py', '.js')):
+                result.findings.append(Finding(
+                    severity="CRITICAL",
+                    vector="Git Hook",
+                    description=f"Executable git hook found: .git/hooks/{hook} — runs automatically on git operations",
+                    file=hook,
+                    line=0,
+                ))
+
     # ── Classify and process files ──
     for filepath in all_files:
         fname = pathlib.Path(filepath).name
         ext = pathlib.Path(filepath).suffix.lower()
         rel_path = os.path.relpath(filepath, skill_path)
+
+        # Symlink escape detection — check before reading any file
+        if os.path.islink(filepath):
+            target = os.path.realpath(filepath)
+            skill_abs = os.path.realpath(skill_path)
+            if not target.startswith(skill_abs + os.sep) and target != skill_abs:
+                result.findings.append(Finding(
+                    severity="CRITICAL",
+                    vector="Symlink Escape",
+                    description=f"Symlink points outside skill directory: {rel_path} → {target}",
+                    file=rel_path,
+                    line=0,
+                ))
+                continue  # do not follow the symlink further
 
         content, err = read_file_safe(filepath)
         if err:
@@ -872,22 +1052,9 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
             if fname != "package.json":
                 audit_network(result, content, filepath)
 
-        # Binary / suspicious file types
-        elif ext in (".exe", ".dll", ".so", ".dylib", ".bin"):
-            result.findings.append(Finding(
-                severity="HIGH",
-                vector="Suspicious File",
-                description=f"Binary file in skill: {rel_path}",
-                file=rel_path,
-            ))
-
-        elif ext in (".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz"):
-            result.findings.append(Finding(
-                severity="MEDIUM",
-                vector="Suspicious File",
-                description=f"Archive file in skill: {rel_path} (may contain hidden content)",
-                file=rel_path,
-            ))
+        # Binary / image / archive files — magic-byte analysis
+        elif ext in BINARY_EXTENSIONS | ARCHIVE_EXTENSIONS | IMAGE_EXTENSIONS:
+            audit_binary_file(result, filepath, rel_path)
 
     # ── Structural analysis (runs after pattern scan) ──
     audit_structural(result, all_files, skill_path, pre_scan_count)
@@ -1078,18 +1245,29 @@ def generate_report(result: AuditResult) -> str:
     has_malicious_code = has_vector("malicious code") or has_vector("hardcoded secret") or has_vector("post-install")
     has_suspicious_network = has_vector("network") or has_vector("exfiltration")
     has_typosquatting = has_vector("typosquatting")
-    has_binary_files = has_vector("suspicious file")
+    has_binary_files   = has_vector("suspicious file") or has_vector("suspicious binary") or has_vector("archive file") or has_vector("binary executable")
+    has_symlink_escape = has_vector("symlink escape")
+    has_git_hooks      = has_vector("git hook")
+    has_anti_audit     = any("anti-audit evasion" in f.description.lower() or "conditional behavior" in f.description.lower() for f in all_f)
+    has_disguised_exec = has_vector("disguised executable") or has_vector("magic mismatch")
+    has_compiled_exec  = has_vector("binary executable")
+    has_archive        = has_vector("archive file")
 
     lines.append(check("No prompt injection in SKILL.md", not has_prompt_injection))
     lines.append(check("No malicious code patterns (eval/exec/subprocess)", not has_malicious_code))
     lines.append(check("No hardcoded secrets or API keys", not any("hardcoded" in f.vector.lower() or "secret" in f.description.lower() for f in all_f)))
     lines.append(check("No suspicious network requests", not has_suspicious_network))
     lines.append(check("No typosquatting dependencies", not has_typosquatting))
-    lines.append(check("No binary / archive files", not has_binary_files))
+    lines.append(check("No compiled executables (ELF/PE/Mach-O)", not has_compiled_exec))
+    lines.append(check("No disguised files (extension mismatch)", not has_disguised_exec))
+    lines.append(check("No suspicious archives", not has_archive))
     lines.append(check("No post-install hooks", not any("post-install" in f.vector.lower() for f in all_f)))
     lines.append(check("No system info collection", not any("hostname" in f.description.lower() or "username" in f.description.lower() or "ip address" in f.description.lower() for f in all_f)))
     lines.append(check("No crypto miner patterns", not any("mining" in f.description.lower() or "miner" in f.description.lower() for f in all_f)))
     lines.append(check("No invisible Unicode characters", not any("zero-width" in f.description.lower() or "invisible unicode" in f.description.lower() for f in all_f)))
+    lines.append(check("No symlinks escaping skill directory", not has_symlink_escape))
+    lines.append(check("No git hooks", not has_git_hooks))
+    lines.append(check("No anti-audit evasion patterns", not has_anti_audit))
     lines.append("")
 
     # Domains
