@@ -1129,229 +1129,197 @@ LEVEL_ICON = {
     "DANGEROUS": "🔴",
 }
 
-def generate_report(result: AuditResult) -> str:
+def generate_report(result: AuditResult, intent_performed: bool = False) -> str:
     lines = []
 
-    lines.append(f"# 🔍 Security Audit Report: `{result.skill_name}`")
+    # ── Header ──
+    lines.append("# SafeClaw Security Audit")
+    lines.append("")
+    lines.append(f"## Skill: `{result.skill_name}`")
     lines.append("")
     lines.append("---")
     lines.append("")
 
-    # Score summary
-    level_icon = LEVEL_ICON[result.level]
-    lines.append(f"## Risk Assessment")
+    # ── Score ──
+    lines.append("## Score")
     lines.append("")
-    lines.append(f"| | |")
-    lines.append(f"|---|---|")
-    lines.append(f"| **Risk Score** | **{result.score}/100** |")
-    lines.append(f"| **Level** | {level_icon} **{result.level}** |")
-    lines.append(f"| **Recommendation** | **{result.recommendation}** |")
-    lines.append(f"| **Files Checked** | {len(result.checked_files)} |")
-    lines.append(f"| **Total Lines** | {result.total_lines:,} |")
-    lines.append(f"| **Total Findings** | {len(result.findings)} |")
+    lines.append("| | |")
+    lines.append("|---|---|")
+    lines.append(f"| Score | **{result.score}/100** |")
+    lines.append(f"| Level | {result.level} |")
+    lines.append(f"| Recommendation | {result.recommendation} |")
     lines.append("")
-
-    # Recommendation box
-    rec_map = {
-        "INSTALL": "✅ **INSTALL** — No significant risks detected.",
-        "INSTALL WITH CAUTION": "⚠️  **INSTALL WITH CAUTION** — Review findings below before proceeding.",
-        "DO NOT INSTALL": "🚫 **DO NOT INSTALL** — Critical or high-severity issues found. Do not install.",
-    }
-    lines.append(f"> {rec_map[result.recommendation]}")
-    lines.append("")
-
-    # Large skill advisory
-    if result.total_lines >= 2000:
-        lines.append(f"> ⚠️  **Large skill detected ({result.total_lines:,} lines).** For skills > 2000 lines, LLM-assisted review is recommended (v3.0). Large skills can exploit context window truncation to hide payloads.")
-        lines.append("")
-
-    # SIZE ANALYSIS section
-    size_findings = [f for f in result.findings if f.vector == "Size Analysis"]
     lines.append("---")
     lines.append("")
-    lines.append("## Size Analysis")
-    lines.append("")
-    if size_findings:
-        sf = size_findings[0]
-        icon = SEVERITY_ICON[sf.severity]
-        lines.append(f"{icon} **{sf.severity}** — {sf.description}")
-        lines.append("")
-        lines.append("| Threshold | Alert Level |")
-        lines.append("|-----------|------------|")
-        lines.append("| < 500 lines | ⚪ None |")
-        lines.append("| 500–1,999 lines | ⚪ INFO — Above average size |")
-        lines.append("| 2,000–4,999 lines | 🟡 MEDIUM — Increased risk |")
-        lines.append("| 5,000–9,999 lines | 🟠 HIGH — Chunked review recommended |")
-        lines.append("| ≥ 10,000 lines | 🔴 CRITICAL — Possible context window attack |")
-    else:
-        lines.append("✅ Size is within normal range — no size-related alerts.")
-    lines.append("")
 
-    # STRUCTURAL ANALYSIS section
-    struct_findings = [f for f in result.findings if f.vector == "Structural Analysis"]
-    lines.append("---")
-    lines.append("")
-    lines.append("## Structural Analysis")
-    lines.append("")
-    if struct_findings:
-        for sf in struct_findings:
-            icon = SEVERITY_ICON[sf.severity]
-            lines.append(f"{icon} **{sf.severity}** — {sf.description}")
-            if sf.evidence:
-                lines.append(f"  *Evidence: {sf.evidence}*")
-            lines.append("")
-    else:
-        lines.append("✅ No structural anomalies detected.")
-    lines.append("")
-
-    # Findings breakdown (exclude Size/Structural — already shown above)
+    # ── Layer 1 — Pattern Analysis ──
     excluded_vectors = {"Size Analysis", "Structural Analysis"}
-    main_findings = [f for f in result.findings if f.vector not in excluded_vectors]
+    pattern_findings = [f for f in result.findings if f.vector not in excluded_vectors]
 
-    by_severity = {}
-    for f in main_findings:
+    lines.append("## Layer 1 — Pattern Analysis")
+    lines.append("")
+    lines.append(f"Files checked: {len(result.checked_files)}")
+    lines.append(f"Total findings: {len(pattern_findings)}")
+    lines.append("")
+
+    by_severity: dict = {}
+    for f in pattern_findings:
         by_severity.setdefault(f.severity, []).append(f)
 
-    if main_findings:
-        lines.append("---")
-        lines.append("")
-        lines.append("## Findings")
-        lines.append("")
-
+    if pattern_findings:
         for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]:
-            findings = by_severity.get(sev, [])
-            if not findings:
+            sev_findings = by_severity.get(sev, [])
+            if not sev_findings:
                 continue
-            icon = SEVERITY_ICON[sev]
-            lines.append(f"### {icon} {sev} ({len(findings)})")
+            lines.append(f"### {sev}")
             lines.append("")
-            lines.append("| # | Vector | Description | File | Line |")
-            lines.append("|---|--------|-------------|------|------|")
-            for i, f in enumerate(findings, 1):
+            lines.append("| # | Finding | File | Line |")
+            lines.append("|---|---------|------|------|")
+            evidences = []
+            for i, f in enumerate(sev_findings, 1):
                 file_str = f.file or "—"
                 line_str = str(f.line) if f.line else "—"
                 desc = f.description.replace("|", "\\|")
-                lines.append(f"| {i} | {f.vector} | {desc} | `{file_str}` | {line_str} |")
+                lines.append(f"| {i} | {desc} | {file_str} | {line_str} |")
+                if f.evidence:
+                    evidences.append(f.evidence)
             lines.append("")
-
-            # Evidence details for CRITICAL / HIGH
-            if sev in ("CRITICAL", "HIGH"):
-                for i, f in enumerate(findings, 1):
-                    if f.evidence:
-                        lines.append(f"**Finding {i} evidence:**")
-                        lines.append(f"```")
-                        lines.append(f.evidence[:200])
-                        lines.append(f"```")
-                        lines.append("")
+            for ev in evidences:
+                lines.append(f"> Evidence: `{ev[:120]}`")
+            if evidences:
+                lines.append("")
     else:
-        lines.append("---")
-        lines.append("")
-        lines.append("## Findings")
-        lines.append("")
-        lines.append("✅ No security issues found.")
+        lines.append("No findings.")
         lines.append("")
 
-    # All findings (for checklist logic — use all findings including size/structural)
-    all_f = result.findings
-
-    # Checklist
     lines.append("---")
     lines.append("")
-    lines.append("## Security Checklist")
+
+    # ── Layer 2 — Size & Structure ──
+    size_findings = [f for f in result.findings if f.vector == "Size Analysis"]
+    struct_findings = [f for f in result.findings if f.vector == "Structural Analysis"]
+
+    lines.append("## Layer 2 — Size & Structure")
+    lines.append("")
+    lines.append(f"Total lines: {result.total_lines:,}")
+
+    if size_findings:
+        sf = size_findings[0]
+        lines.append(f"Size alert: {sf.severity} — {sf.description}")
+    else:
+        lines.append("Size alert: None")
     lines.append("")
 
-    def check(name, condition_ok):
+    if struct_findings:
+        lines.append("Structure:")
+        for sf in struct_findings:
+            lines.append(f"- {sf.severity}: {sf.description}")
+    else:
+        lines.append("Structure: No anomalies")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Layer 3 — Intent Analysis ──
+    lines.append("## Layer 3 — Intent Analysis")
+    lines.append("")
+    if intent_performed:
+        lines.append("Status: Performed")
+    else:
+        lines.append("Status: Not performed (use --intent flag)")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Layer 4 — Anti-Evasion ──
+    lines.append("## Layer 4 — Anti-Evasion")
+    lines.append("")
+    if intent_performed:
+        lines.append("Status: Performed")
+    else:
+        lines.append("Status: Run with intent analysis (--intent flag)")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Checklist ──
+    lines.append("## Checklist")
+    lines.append("")
+
+    all_f = result.findings
+
+    def check(name: str, condition_ok: bool) -> str:
         icon = "✅" if condition_ok else "❌"
         return f"{icon} {name}"
 
     has_vector = lambda v: any(v.lower() in f.vector.lower() for f in all_f)
-    has_critical_or_high = any(f.severity in ("CRITICAL", "HIGH") for f in all_f)
-    has_prompt_injection = has_vector("prompt injection")
-    has_malicious_code = has_vector("malicious code") or has_vector("hardcoded secret") or has_vector("post-install")
-    has_suspicious_network = has_vector("network") or has_vector("exfiltration")
-    has_typosquatting = has_vector("typosquatting")
-    has_binary_files   = has_vector("suspicious file") or has_vector("suspicious binary") or has_vector("archive file") or has_vector("binary executable")
-    has_symlink_escape = has_vector("symlink escape")
-    has_git_hooks      = has_vector("git hook")
-    has_anti_audit     = any("anti-audit evasion" in f.description.lower() or "conditional behavior" in f.description.lower() for f in all_f)
-    has_disguised_exec = has_vector("disguised executable") or has_vector("magic mismatch")
-    has_compiled_exec  = has_vector("binary executable")
-    has_archive        = has_vector("archive file")
+    has_prompt_injection  = has_vector("prompt injection")
+    has_malicious_code    = has_vector("malicious code") or has_vector("hardcoded secret") or has_vector("post-install")
+    has_suspicious_network= has_vector("network") or has_vector("exfiltration")
+    has_typosquatting     = has_vector("typosquatting")
+    has_compiled_exec     = has_vector("binary executable")
+    has_disguised_exec    = has_vector("disguised executable") or has_vector("magic mismatch")
+    has_archive           = has_vector("archive file")
+    has_symlink_escape    = has_vector("symlink escape")
+    has_git_hooks         = has_vector("git hook")
+    has_anti_audit        = any(
+        "anti-audit evasion" in f.description.lower() or "conditional behavior" in f.description.lower()
+        for f in all_f
+    )
 
-    lines.append(check("No prompt injection in SKILL.md", not has_prompt_injection))
-    lines.append(check("No malicious code patterns (eval/exec/subprocess)", not has_malicious_code))
-    lines.append(check("No hardcoded secrets or API keys", not any("hardcoded" in f.vector.lower() or "secret" in f.description.lower() for f in all_f)))
+    lines.append(check("No prompt injection", not has_prompt_injection))
+    lines.append(check("No malicious code patterns", not has_malicious_code))
+    lines.append(check("No hardcoded secrets", not any("hardcoded" in f.vector.lower() or "secret" in f.description.lower() for f in all_f)))
     lines.append(check("No suspicious network requests", not has_suspicious_network))
-    lines.append(check("No typosquatting dependencies", not has_typosquatting))
-    lines.append(check("No compiled executables (ELF/PE/Mach-O)", not has_compiled_exec))
-    lines.append(check("No disguised files (extension mismatch)", not has_disguised_exec))
+    lines.append(check("No typosquatting", not has_typosquatting))
+    lines.append(check("No compiled executables", not has_compiled_exec))
+    lines.append(check("No disguised files", not has_disguised_exec))
     lines.append(check("No suspicious archives", not has_archive))
     lines.append(check("No post-install hooks", not any("post-install" in f.vector.lower() for f in all_f)))
-    lines.append(check("No system info collection", not any("hostname" in f.description.lower() or "username" in f.description.lower() or "ip address" in f.description.lower() for f in all_f)))
-    lines.append(check("No crypto miner patterns", not any("mining" in f.description.lower() or "miner" in f.description.lower() for f in all_f)))
-    lines.append(check("No invisible Unicode characters", not any("zero-width" in f.description.lower() or "invisible unicode" in f.description.lower() for f in all_f)))
-    lines.append(check("No symlinks escaping skill directory", not has_symlink_escape))
+    lines.append(check("No system info collection", not any(
+        "hostname" in f.description.lower() or "username" in f.description.lower() or "ip address" in f.description.lower()
+        for f in all_f
+    )))
+    lines.append(check("No crypto miners", not any(
+        "mining" in f.description.lower() or "miner" in f.description.lower()
+        for f in all_f
+    )))
+    lines.append(check("No invisible Unicode", not any(
+        "zero-width" in f.description.lower() or "invisible unicode" in f.description.lower()
+        for f in all_f
+    )))
+    lines.append(check("No symlink escapes", not has_symlink_escape))
     lines.append(check("No git hooks", not has_git_hooks))
-    lines.append(check("No anti-audit evasion patterns", not has_anti_audit))
+    lines.append(check("No anti-audit evasion", not has_anti_audit))
     lines.append("")
-
-    # Domains
-    if result.domains_found:
-        lines.append("---")
-        lines.append("")
-        lines.append("## Domains / URLs Found")
-        lines.append("")
-        for domain in sorted(result.domains_found):
-            suspicious = is_suspicious_domain(domain)
-            icon = "⚠️" if suspicious else "✅"
-            lines.append(f"- {icon} `{domain}`")
-        lines.append("")
-
-    # Dependencies
-    if result.dependencies:
-        lines.append("---")
-        lines.append("")
-        lines.append("## Dependencies")
-        lines.append("")
-        for dep_type, pkgs in result.dependencies.items():
-            if pkgs:
-                lines.append(f"**{dep_type.upper()}** ({len(pkgs)} packages): " + ", ".join(f"`{p}`" for p in pkgs[:20]))
-                if len(pkgs) > 20:
-                    lines.append(f"  *(+{len(pkgs)-20} more)*")
-                lines.append("")
-
-    # Author info
-    if result.author_info.get("checked"):
-        lines.append("---")
-        lines.append("")
-        lines.append("## Author / Provenance (ClawHub)")
-        lines.append("")
-        if result.author_info.get("found"):
-            lines.append(f"- **Author:** {result.author_info.get('author', '?')}")
-            lines.append(f"- **Stars:** {result.author_info.get('stars', '?')}")
-            lines.append(f"- **Downloads:** {result.author_info.get('downloads', '?')}")
-            lines.append(f"- **Version:** {result.author_info.get('version', '?')}")
-            lines.append(f"- **Last updated:** {result.author_info.get('updated_at', '?')}")
-        elif result.author_info.get("found") is False:
-            lines.append(f"⚠️ Skill `{result.skill_name}` not found on ClawHub — may be local/unofficial.")
-        else:
-            lines.append(f"ℹ️ ClawHub lookup skipped or failed: {result.author_info.get('error', 'unknown error')}")
-        lines.append("")
-
-    # Files checked
     lines.append("---")
     lines.append("")
+
+    # ── Network ──
+    if result.domains_found:
+        lines.append("## Network")
+        lines.append("")
+        lines.append("Domains found:")
+        for domain in sorted(result.domains_found):
+            suspicious = is_suspicious_domain(domain)
+            tag = " (suspicious)" if suspicious else ""
+            lines.append(f"- {domain}{tag}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # ── Files Audited ──
     lines.append("## Files Audited")
     lines.append("")
     for f in result.checked_files[:50]:
-        lines.append(f"- `{f}`")
+        lines.append(f"- {f}")
     if len(result.checked_files) > 50:
         lines.append(f"- *(+{len(result.checked_files)-50} more files)*")
     lines.append("")
-
     lines.append("---")
     lines.append("")
-    lines.append(f"*Generated by [skill-security-audit](https://clawhub.ai) — OpenClaw Security Auditor*")
+
+    lines.append("*SafeClaw Security Auditor v3.0 — github.com/safeclaw-sec/skill-security-audit*")
     lines.append("")
 
     return "\n".join(lines)
@@ -1377,6 +1345,7 @@ Examples:
     parser.add_argument("skill_path", help="Path to skill directory or skill name (for ClawHub lookup)")
     parser.add_argument("--output", "-o", help="Save report to file (default: print to stdout)")
     parser.add_argument("--no-clawhub", action="store_true", help="Skip ClawHub author lookup")
+    parser.add_argument("--intent", action="store_true", help="Mark intent analysis as performed (Layer 3/4)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON findings instead of markdown report")
 
     args = parser.parse_args()
@@ -1433,7 +1402,7 @@ Examples:
             "author_info": result.author_info,
         }, indent=2)
     else:
-        output = generate_report(result)
+        output = generate_report(result, intent_performed=args.intent)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
