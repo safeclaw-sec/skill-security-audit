@@ -185,6 +185,38 @@ footer p{margin:4px 0}
   </div>
 </section>
 
+
+<section>
+  <div class="container">
+    <h2 class="section-title">Zero Trust Sandbox</h2>
+    <p class="section-sub">Every audit runs in an isolated environment. Auto-detects the best sandbox for your OS.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:linear-gradient(135deg,var(--green),#00aa55)">1</div>
+        <h3>Docker</h3>
+        <p>Strongest isolation. Ephemeral container: no network, read-only, 256MB limit, auto-destroyed after 60s.</p>
+        <p style="color:var(--muted);font-size:0.8rem;margin-top:8px">Linux &amp; macOS</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:linear-gradient(135deg,var(--blue),#2266cc)">2</div>
+        <h3>bubblewrap / firejail</h3>
+        <p>Lightweight Linux sandboxing. No root needed. Network disabled, filesystem isolated.</p>
+        <p style="color:var(--muted);font-size:0.8rem;margin-top:8px">Linux</p>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:linear-gradient(135deg,var(--yellow),#cc8800)">3</div>
+        <h3>sandbox-exec</h3>
+        <p>Native macOS sandbox. No install required. Network and filesystem restrictions enforced by the OS.</p>
+        <p style="color:var(--muted);font-size:0.8rem;margin-top:8px">macOS</p>
+      </div>
+    </div>
+    <div style="margin-top:32px;padding:20px;background:var(--glass);border:1px solid var(--border);border-radius:10px">
+      <p style="font-size:0.95rem"><strong>No sandbox found?</strong> SafeClaw detects your OS and suggests the fastest option to install. Self-audit runs without sandbox &mdash; no need to isolate the auditor from itself.</p>
+      <p style="color:var(--muted);font-size:0.85rem;margin-top:8px">Windows support coming soon. Fallback mode available on all platforms.</p>
+    </div>
+  </div>
+</section>
+
 <section>
   <div class="container">
     <h2 class="section-title">What It Detects</h2>
