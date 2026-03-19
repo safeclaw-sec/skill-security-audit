@@ -54,6 +54,8 @@ class AuditResult:
     env_vars_accessed: List[str] = field(default_factory=list)
     dependencies: dict = field(default_factory=dict)
     author_info: dict = field(default_factory=dict)
+    total_lines: int = 0
+    total_files_count: int = 0
 
     @property
     def score(self) -> int:
@@ -654,6 +656,144 @@ def check_author_clawhub(skill_name: str) -> dict:
 
 
 # ─────────────────────────────────────────────
+# Size and structural analysis (Camada 2 partial)
+# ─────────────────────────────────────────────
+
+def audit_size(result: AuditResult, all_files: List[str], skill_path: str):
+    """
+    Analyze total skill size and emit alerts based on line count thresholds.
+    Large skills are not just complex — they can be used as attack vectors
+    to exploit LLM context window truncation.
+    """
+    total_lines = 0
+    for filepath in all_files:
+        content, err = read_file_safe(filepath)
+        if content:
+            total_lines += content.count("\n") + 1
+
+    result.total_lines = total_lines
+    result.total_files_count = len(all_files)
+
+    if total_lines >= 10000:
+        result.findings.append(Finding(
+            severity="CRITICAL",
+            vector="Size Analysis",
+            description=f"Abnormally large skill ({total_lines} lines, {len(all_files)} files) — possible context window attack",
+            file="[all files]",
+            line=0,
+            evidence=f"Total lines: {total_lines} | Files: {len(all_files)}",
+        ))
+    elif total_lines >= 5000:
+        result.findings.append(Finding(
+            severity="HIGH",
+            vector="Size Analysis",
+            description=f"Very large skill ({total_lines} lines, {len(all_files)} files) — chunked review recommended",
+            file="[all files]",
+            line=0,
+            evidence=f"Total lines: {total_lines} | Files: {len(all_files)}",
+        ))
+    elif total_lines >= 2000:
+        result.findings.append(Finding(
+            severity="MEDIUM",
+            vector="Size Analysis",
+            description=f"Large skill ({total_lines} lines, {len(all_files)} files) — increased risk of hidden payloads",
+            file="[all files]",
+            line=0,
+            evidence=f"Total lines: {total_lines} | Files: {len(all_files)}",
+        ))
+    elif total_lines >= 500:
+        result.findings.append(Finding(
+            severity="INFO",
+            vector="Size Analysis",
+            description=f"Above average size ({total_lines} lines, {len(all_files)} files) — review with attention",
+            file="[all files]",
+            line=0,
+            evidence=f"Total lines: {total_lines} | Files: {len(all_files)}",
+        ))
+    # < 500 lines: no alert
+
+
+def audit_structural(result: AuditResult, all_files: List[str], skill_path: str, pre_scan_findings_count: int):
+    """
+    Structural analysis: comment/code ratio and finding distribution.
+    Unusual ratios or end-concentrated findings can indicate hidden payloads.
+    """
+    code_extensions = {".py", ".js", ".ts", ".sh", ".bash", ".mjs", ".cjs"}
+
+    for filepath in all_files:
+        ext = pathlib.Path(filepath).suffix.lower()
+        if ext not in code_extensions:
+            continue
+
+        content, err = read_file_safe(filepath)
+        if not content:
+            continue
+
+        fname = os.path.basename(filepath)
+        lines = content.splitlines()
+        if not lines:
+            continue
+
+        total = len(lines)
+        comment_count = 0
+        for line in lines:
+            stripped = line.strip()
+            if ext == ".py":
+                if stripped.startswith("#"):
+                    comment_count += 1
+            elif ext in (".js", ".ts", ".mjs", ".cjs"):
+                if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+                    comment_count += 1
+            elif ext in (".sh", ".bash"):
+                if stripped.startswith("#"):
+                    comment_count += 1
+
+        if total > 20:  # only check files with enough lines to be meaningful
+            ratio = comment_count / total
+            if ratio > 0.70:
+                result.findings.append(Finding(
+                    severity="MEDIUM",
+                    vector="Structural Analysis",
+                    description=f"Unusual comment ratio in {fname}: {int(ratio*100)}% comments — may hide payloads in comments",
+                    file=fname,
+                    line=0,
+                    evidence=f"Comment lines: {comment_count}/{total} ({int(ratio*100)}%)",
+                ))
+
+    # Check finding distribution: if all concentrated in last 20% of file
+    # (applies to findings added AFTER size analysis — i.e., pattern-matching findings)
+    per_file_findings: dict = {}
+    for f in result.findings[pre_scan_findings_count:]:
+        if f.file and f.file != "[all files]" and f.line > 0:
+            per_file_findings.setdefault(f.file, []).append(f.line)
+
+    for fname, finding_lines in per_file_findings.items():
+        if len(finding_lines) < 3:
+            continue
+        # Find total lines for this file
+        file_total = 0
+        for filepath in all_files:
+            if os.path.basename(filepath) == fname:
+                content, _ = read_file_safe(filepath)
+                if content:
+                    file_total = content.count("\n") + 1
+                break
+        if file_total < 50:
+            continue
+        threshold_line = int(file_total * 0.80)
+        lines_in_last_20pct = sum(1 for ln in finding_lines if ln >= threshold_line)
+        if lines_in_last_20pct == len(finding_lines) and len(finding_lines) >= 3:
+            result.findings.append(Finding(
+                severity="MEDIUM",
+                vector="Structural Analysis",
+                description=f"Suspicious finding distribution in {fname}: all {len(finding_lines)} findings concentrated in last 20% of file",
+                file=fname,
+                line=threshold_line,
+                evidence=f"All findings at lines: {sorted(finding_lines)} (file has {file_total} lines)",
+            ))
+
+
+# ─────────────────────────────────────────────
 # Main audit orchestrator
 # ─────────────────────────────────────────────
 
@@ -674,6 +814,12 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
 
     self_audit = _is_self_audit(skill_path)
     all_files = find_all_files(skill_path)
+
+    # ── Size analysis (runs first, before pattern scanning) ──
+    audit_size(result, all_files, skill_path)
+
+    # Record how many findings exist before pattern scanning (for structural distribution check)
+    pre_scan_count = len(result.findings)
 
     # ── Classify and process files ──
     for filepath in all_files:
@@ -739,6 +885,9 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
                 file=rel_path,
             ))
 
+    # ── Structural analysis (runs after pattern scan) ──
+    audit_structural(result, all_files, skill_path, pre_scan_count)
+
     # Dependency audit (separate from file loop)
     audit_dependencies(result, skill_path)
 
@@ -802,6 +951,7 @@ def generate_report(result: AuditResult) -> str:
     lines.append(f"| **Level** | {level_icon} **{result.level}** |")
     lines.append(f"| **Recommendation** | **{result.recommendation}** |")
     lines.append(f"| **Files Checked** | {len(result.checked_files)} |")
+    lines.append(f"| **Total Lines** | {result.total_lines:,} |")
     lines.append(f"| **Total Findings** | {len(result.findings)} |")
     lines.append("")
 
@@ -814,12 +964,59 @@ def generate_report(result: AuditResult) -> str:
     lines.append(f"> {rec_map[result.recommendation]}")
     lines.append("")
 
-    # Findings breakdown
+    # Large skill advisory
+    if result.total_lines >= 2000:
+        lines.append(f"> ⚠️  **Large skill detected ({result.total_lines:,} lines).** For skills > 2000 lines, LLM-assisted review is recommended (v3.0). Large skills can exploit context window truncation to hide payloads.")
+        lines.append("")
+
+    # SIZE ANALYSIS section
+    size_findings = [f for f in result.findings if f.vector == "Size Analysis"]
+    lines.append("---")
+    lines.append("")
+    lines.append("## Size Analysis")
+    lines.append("")
+    if size_findings:
+        sf = size_findings[0]
+        icon = SEVERITY_ICON[sf.severity]
+        lines.append(f"{icon} **{sf.severity}** — {sf.description}")
+        lines.append("")
+        lines.append("| Threshold | Alert Level |")
+        lines.append("|-----------|------------|")
+        lines.append("| < 500 lines | ⚪ None |")
+        lines.append("| 500–1,999 lines | ⚪ INFO — Above average size |")
+        lines.append("| 2,000–4,999 lines | 🟡 MEDIUM — Increased risk |")
+        lines.append("| 5,000–9,999 lines | 🟠 HIGH — Chunked review recommended |")
+        lines.append("| ≥ 10,000 lines | 🔴 CRITICAL — Possible context window attack |")
+    else:
+        lines.append("✅ Size is within normal range — no size-related alerts.")
+    lines.append("")
+
+    # STRUCTURAL ANALYSIS section
+    struct_findings = [f for f in result.findings if f.vector == "Structural Analysis"]
+    lines.append("---")
+    lines.append("")
+    lines.append("## Structural Analysis")
+    lines.append("")
+    if struct_findings:
+        for sf in struct_findings:
+            icon = SEVERITY_ICON[sf.severity]
+            lines.append(f"{icon} **{sf.severity}** — {sf.description}")
+            if sf.evidence:
+                lines.append(f"  *Evidence: {sf.evidence}*")
+            lines.append("")
+    else:
+        lines.append("✅ No structural anomalies detected.")
+    lines.append("")
+
+    # Findings breakdown (exclude Size/Structural — already shown above)
+    excluded_vectors = {"Size Analysis", "Structural Analysis"}
+    main_findings = [f for f in result.findings if f.vector not in excluded_vectors]
+
     by_severity = {}
-    for f in result.findings:
+    for f in main_findings:
         by_severity.setdefault(f.severity, []).append(f)
 
-    if result.findings:
+    if main_findings:
         lines.append("---")
         lines.append("")
         lines.append("## Findings")
@@ -858,6 +1055,9 @@ def generate_report(result: AuditResult) -> str:
         lines.append("✅ No security issues found.")
         lines.append("")
 
+    # All findings (for checklist logic — use all findings including size/structural)
+    all_f = result.findings
+
     # Checklist
     lines.append("---")
     lines.append("")
@@ -868,8 +1068,8 @@ def generate_report(result: AuditResult) -> str:
         icon = "✅" if condition_ok else "❌"
         return f"{icon} {name}"
 
-    has_vector = lambda v: any(v.lower() in f.vector.lower() for f in result.findings)
-    has_critical_or_high = any(f.severity in ("CRITICAL", "HIGH") for f in result.findings)
+    has_vector = lambda v: any(v.lower() in f.vector.lower() for f in all_f)
+    has_critical_or_high = any(f.severity in ("CRITICAL", "HIGH") for f in all_f)
     has_prompt_injection = has_vector("prompt injection")
     has_malicious_code = has_vector("malicious code") or has_vector("hardcoded secret") or has_vector("post-install")
     has_suspicious_network = has_vector("network") or has_vector("exfiltration")
@@ -878,14 +1078,14 @@ def generate_report(result: AuditResult) -> str:
 
     lines.append(check("No prompt injection in SKILL.md", not has_prompt_injection))
     lines.append(check("No malicious code patterns (eval/exec/subprocess)", not has_malicious_code))
-    lines.append(check("No hardcoded secrets or API keys", not any("hardcoded" in f.vector.lower() or "secret" in f.description.lower() for f in result.findings)))
+    lines.append(check("No hardcoded secrets or API keys", not any("hardcoded" in f.vector.lower() or "secret" in f.description.lower() for f in all_f)))
     lines.append(check("No suspicious network requests", not has_suspicious_network))
     lines.append(check("No typosquatting dependencies", not has_typosquatting))
     lines.append(check("No binary / archive files", not has_binary_files))
-    lines.append(check("No post-install hooks", not any("post-install" in f.vector.lower() for f in result.findings)))
-    lines.append(check("No system info collection", not any("hostname" in f.description.lower() or "username" in f.description.lower() or "ip address" in f.description.lower() for f in result.findings)))
-    lines.append(check("No crypto miner patterns", not any("mining" in f.description.lower() or "miner" in f.description.lower() for f in result.findings)))
-    lines.append(check("No invisible Unicode characters", not any("zero-width" in f.description.lower() or "invisible unicode" in f.description.lower() for f in result.findings)))
+    lines.append(check("No post-install hooks", not any("post-install" in f.vector.lower() for f in all_f)))
+    lines.append(check("No system info collection", not any("hostname" in f.description.lower() or "username" in f.description.lower() or "ip address" in f.description.lower() for f in all_f)))
+    lines.append(check("No crypto miner patterns", not any("mining" in f.description.lower() or "miner" in f.description.lower() for f in all_f)))
+    lines.append(check("No invisible Unicode characters", not any("zero-width" in f.description.lower() or "invisible unicode" in f.description.lower() for f in all_f)))
     lines.append("")
 
     # Domains

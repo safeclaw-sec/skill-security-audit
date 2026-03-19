@@ -1,6 +1,6 @@
 ---
 name: skill-security-audit
-description: "Use ALWAYS before installing any new skill. Automatically audits SKILL.md, scripts, dependencies, and network access. Detects prompt injection, data exfiltration, malicious code, typosquatting, and supply chain attacks. Generates a 0-100 risk score with a clear INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL recommendation. Trigger on: audit skill, check skill security, is this skill safe, review skill before install, scan skill for malware, skill security check, analyze skill risk."
+description: "Use ALWAYS before installing any new skill. Automatically audits SKILL.md, scripts, dependencies, and network access. Detects prompt injection, data exfiltration, malicious code, typosquatting, supply chain attacks, and suspicious skill size. Generates a 0-100 risk score with a clear INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL recommendation. Trigger on: audit skill, check skill security, is this skill safe, review skill before install, scan skill for malware, skill security check, analyze skill risk."
 ---
 
 # Skill Security Auditor
@@ -25,11 +25,14 @@ python3 scripts/audit.py <skill_path_or_name>
 # Audit a local skill directory
 python3 scripts/audit.py /path/to/my-skill/
 
-# Audit by skill name (downloads from ClawHub to /tmp)
+# Audit by skill name (discovers common install paths)
 python3 scripts/audit.py scrapling-official
 
 # Audit current directory
 python3 scripts/audit.py .
+
+# Skip ClawHub lookup (offline mode)
+python3 scripts/audit.py /path/to/skill --no-clawhub
 ```
 
 The script requires only Python 3.6+ standard library — no pip installs needed.
@@ -79,18 +82,39 @@ The script requires only Python 3.6+ standard library — no pip installs needed
 - Update history
 - Reputation signals
 
+### 7. Size Analysis (NEW in v1.1)
+- Total line count across all skill files
+- Alerts by threshold:
+  - < 500 lines: no alert
+  - 500–1,999: INFO — above average size
+  - 2,000–4,999: MEDIUM — increased risk of hidden payloads
+  - 5,000–9,999: HIGH — chunked review recommended
+  - ≥ 10,000: CRITICAL — possible context window attack
+- Large skills can exploit LLM context window truncation to hide payloads in "dead zones"
+
+### 8. Structural Analysis (NEW in v1.1)
+- Comment/code ratio per file
+  - > 70% comments in a code file: MEDIUM alert (may hide payloads in comments)
+- Finding distribution across file
+  - All findings concentrated in last 20% of file: MEDIUM alert (classic payload positioning)
+
 ## Output Format
 
 The report is a Markdown document with:
 
 ```
-# Security Audit: <skill-name>
+# Security Audit Report: <skill-name>
 Risk Score: XX/100 — LEVEL
 Recommendation: INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL
 
+## Size Analysis
+⚪ INFO — Above average size (600 lines)...
+
+## Structural Analysis
+✅ No structural anomalies detected.
+
 ## Findings
-| Severity | Vector | Finding |
-| CRITICAL | Script | eval() with HTTP response data |
+| Severity | Vector | Finding | File | Line |
 ...
 
 ## Checklist
@@ -104,6 +128,27 @@ Recommendation: INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL
 - 🟡 **CAUTION** (26–50): Review findings before installing
 - 🟠 **RISK** (51–75): Strong review required, likely avoid
 - 🔴 **DANGEROUS** (76–100): Do not install
+
+## Roadmap
+
+### v1.1 (current) — Pattern Matching + Size + Structural
+- 6 pattern categories + size alerts + structural analysis
+- 1,500+ lines Python, stdlib only, MIT license
+- Self-audit score: 11/100 SAFE
+
+### v2.0 (planned) — Ephemeral Docker Sandbox
+- Zero-trust execution: `--rm --network none --read-only`
+- Skill mounted read-only, container dies after audit
+- No residue on host
+- Entropy analysis per section (detect obfuscation)
+
+### v3.0 (planned) — LLM Intent Analysis
+- LLM of the user's choice classifies each finding:
+  - MALICIOUS / DEFENSIVE / AMBIGUOUS / BENIGN
+- Chunked analysis: skill divided into 2k-token blocks
+  - No block large enough to truncate
+  - Attackers can't hide payloads in "dead zones"
+- Confidence scores per model at different context lengths
 
 ## Implementation Notes
 
