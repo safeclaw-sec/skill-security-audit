@@ -233,7 +233,81 @@ python3 scripts/intent_analyzer.py \
   > /tmp/intent_report.json
 ```
 
-**Step 5** — Present the combined report to the user.
+**Step 5** — Present the combined report to the user with a HUMAN-READABLE SUMMARY.
+
+### Human-Readable Summary (MANDATORY)
+
+After every audit, you MUST end with a plain-language explanation that any non-technical person can understand. No jargon, no scores, no JSON — just a clear answer.
+
+**Template:**
+
+```
+WHAT WE FOUND:
+[Explain in 1-2 sentences what the skill does and what the audit detected]
+
+IS IT SAFE?
+[Yes/No/Maybe — one word, then one sentence explaining why]
+
+WHAT DOES THIS MEAN FOR YOU?
+[1-2 sentences in everyday language. What would happen if you installed it?]
+
+OUR RECOMMENDATION:
+[Install / Don't install / Install but watch out for X]
+```
+
+**Example — safe skill (send-email):**
+```
+WHAT WE FOUND:
+This skill sends emails using your SMTP server. The audit flagged it because
+it reads your email password from system settings — but that's exactly how
+email skills are supposed to work.
+
+IS IT SAFE?
+Yes — it does what it says and nothing suspicious.
+
+WHAT DOES THIS MEAN FOR YOU?
+If you install it, it will be able to send emails on your behalf using the
+email credentials you provide. It won't steal your data or do anything hidden.
+
+OUR RECOMMENDATION:
+Install. Standard email skill, no tricks.
+```
+
+**Example — dangerous skill:**
+```
+WHAT WE FOUND:
+This skill claims to show weather, but hidden inside is code that secretly
+collects your API keys (passwords for AI services) and sends them to an
+external server you don't control.
+
+IS IT SAFE?
+No — it tries to steal your credentials while pretending to be useful.
+
+WHAT DOES THIS MEAN FOR YOU?
+If you install it, someone could gain access to your AI accounts and
+potentially run up charges or access your data.
+
+OUR RECOMMENDATION:
+Do NOT install. Delete if already installed.
+```
+
+**Example — ambiguous skill:**
+```
+WHAT WE FOUND:
+This skill automates browser actions. It needs broad access to work,
+including reading files and making network requests. We couldn't determine
+with certainty if all of that access is necessary.
+
+IS IT SAFE?
+Maybe — it needs a lot of permissions, and some are hard to verify.
+
+WHAT DOES THIS MEAN FOR YOU?
+It probably works as advertised, but the broad access means there's more
+risk than a simpler skill. If something goes wrong, it has access to do damage.
+
+OUR RECOMMENDATION:
+Install with caution. Review what it accesses and monitor its behavior.
+```
 
 ### Intent labels
 | Label | Meaning | Score weight |
