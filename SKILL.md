@@ -143,17 +143,31 @@ Before running intent analysis, you MUST inform the user:
 
 | Model | Accuracy Estimate | Context Window Reliability | Best For |
 |-------|------------------|---------------------------|----------|
-| Claude Opus 4.6 | ~90% | Reliable up to 100k tokens | Most thorough analysis — recommended |
-| Claude Sonnet 4.6 | ~85% | Reliable up to 60k tokens | Good balance of speed and accuracy |
-| Claude Sonnet 4.5 | ~82% | Reliable up to 50k tokens | Acceptable for most skills |
-| Claude Haiku 4.5 | ~70% | Reliable up to 20k tokens | Fast but may miss subtle attacks |
+| **Tier 1 — Recommended for security audit** ||||
+| Claude Opus 4.6 | ~90% | Reliable up to 100k tokens | Most thorough — gold standard |
+| Claude Sonnet 4.6 | ~85% | Reliable up to 60k tokens | Best balance speed/accuracy |
 | GPT-4o | ~85% | Reliable up to 60k tokens | Strong reasoning, good alternative |
-| GPT-4o mini | ~70% | Reliable up to 30k tokens | Budget option, lower accuracy |
-| Gemini 3 Pro | ~80% | Reliable up to 200k tokens | Best for very large skills |
+| Gemini 3 Pro | ~80% | Reliable up to 200k tokens | Best for very large skills (200k window) |
+| **Tier 2 — Acceptable** ||||
+| Claude Sonnet 4.5 | ~82% | Reliable up to 50k tokens | Solid for most skills |
+| Gemini 3.1 Pro | ~80% | Reliable up to 200k tokens | Large context, good reasoning |
+| GLM-5 (z.ai/Zhipu) | ~78% | Reliable up to 50k tokens | Strong Chinese model, good at code |
+| MiniMax M2.7 | ~75% | Reliable up to 40k tokens | Self-evolving, good for agents |
+| DeepSeek V3.2 | ~75% | Reliable up to 60k tokens | Strong reasoning, cost-effective |
+| Step 3.5 Flash | ~72% | Reliable up to 60k tokens | Very fast, high volume, less nuance |
 | Gemini 3 Flash | ~75% | Reliable up to 100k tokens | Fast, good for large skills |
-| DeepSeek V3 | ~65% | Reliable up to 30k tokens | Budget, may miss nuanced attacks |
-| Llama 70B (local) | ~70% | Reliable up to 30k tokens | Private but less accurate |
-| Llama 7B (local) | ~50% | Reliable up to 4k tokens | Not recommended for security audit |
+| **Tier 3 — Budget / Limited** ||||
+| Claude Haiku 4.5 | ~70% | Reliable up to 20k tokens | Fast but may miss subtle attacks |
+| GPT-4o mini | ~70% | Reliable up to 30k tokens | Budget, lower accuracy |
+| Qwen 3.5 (Alibaba) | ~70% | Reliable up to 30k tokens | Open-source, decent reasoning |
+| MiniMax M2.5 | ~68% | Reliable up to 30k tokens | Open-source, good for basic audit |
+| Kimi K2.5 (Moonshot) | ~68% | Reliable up to 100k tokens | Large window but less precise |
+| Llama 3.3 70B (local) | ~70% | Reliable up to 30k tokens | Private, no data leaves your machine |
+| DeepSeek R1 (local) | ~65% | Reliable up to 30k tokens | Reasoning-focused, budget |
+| **Tier 4 — Not recommended** ||||
+| Llama 7-8B (local) | ~50% | Reliable up to 4k tokens | Too small for security analysis |
+| Phi-3 mini (local) | ~45% | Reliable up to 4k tokens | Not enough reasoning capability |
+| Any model < 7B | <50% | Unreliable | Do not use for security audit |
 
 3. **Skill size vs model window**: If the skill has more tokens than the model's reliable window, WARN:
    "This skill has X tokens. Your model is reliable up to Y tokens. Analysis confidence is reduced. Consider using a model with a larger context window, or the chunked analysis will be applied automatically."

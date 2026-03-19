@@ -26,15 +26,32 @@ from collections import Counter
 # ---------------------------------------------------------------------------
 
 MODEL_CONFIDENCE = {
-    "opus":         {"max_tokens": 100000, "confidence": 0.90},
-    "sonnet":       {"max_tokens": 60000,  "confidence": 0.85},
-    "haiku":        {"max_tokens": 20000,  "confidence": 0.70},
-    "gemini-pro":   {"max_tokens": 200000, "confidence": 0.80},
-    "gemini-flash": {"max_tokens": 100000, "confidence": 0.75},
-    "gpt-4o":       {"max_tokens": 60000,  "confidence": 0.85},
-    "deepseek":     {"max_tokens": 30000,  "confidence": 0.65},
-    "llama-70b":    {"max_tokens": 30000,  "confidence": 0.70},
-    "unknown":      {"max_tokens": 10000,  "confidence": 0.60},
+    # Tier 1 — Recommended for security audit
+    "opus":            {"max_tokens": 100000, "confidence": 0.90},
+    "sonnet":          {"max_tokens": 60000,  "confidence": 0.85},
+    "gpt-4o":          {"max_tokens": 60000,  "confidence": 0.85},
+    "gemini-pro":      {"max_tokens": 200000, "confidence": 0.80},
+    # Tier 2 — Acceptable
+    "sonnet-4.5":      {"max_tokens": 50000,  "confidence": 0.82},
+    "gemini-3.1-pro":  {"max_tokens": 200000, "confidence": 0.80},
+    "glm-5":           {"max_tokens": 50000,  "confidence": 0.78},
+    "minimax-m2.7":    {"max_tokens": 40000,  "confidence": 0.75},
+    "deepseek-v3":     {"max_tokens": 60000,  "confidence": 0.75},
+    "step-flash":      {"max_tokens": 60000,  "confidence": 0.72},
+    "gemini-flash":    {"max_tokens": 100000, "confidence": 0.75},
+    # Tier 3 — Budget / Limited
+    "haiku":           {"max_tokens": 20000,  "confidence": 0.70},
+    "gpt-4o-mini":     {"max_tokens": 30000,  "confidence": 0.70},
+    "qwen-3.5":        {"max_tokens": 30000,  "confidence": 0.70},
+    "minimax-m2.5":    {"max_tokens": 30000,  "confidence": 0.68},
+    "kimi-k2.5":       {"max_tokens": 100000, "confidence": 0.68},
+    "llama-70b":       {"max_tokens": 30000,  "confidence": 0.70},
+    "deepseek-r1":     {"max_tokens": 30000,  "confidence": 0.65},
+    # Tier 4 — Not recommended
+    "llama-7b":        {"max_tokens": 4000,   "confidence": 0.50},
+    "phi-3-mini":      {"max_tokens": 4000,   "confidence": 0.45},
+    # Default
+    "unknown":         {"max_tokens": 10000,  "confidence": 0.60},
 }
 
 VALID_INTENTS = {"MALICIOUS", "DEFENSIVE", "UTILITY", "AMBIGUOUS", "FALSE_POSITIVE"}
