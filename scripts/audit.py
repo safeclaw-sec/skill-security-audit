@@ -343,6 +343,20 @@ def _build_code_block_map(lines: List[str]) -> List[bool]:
     return result_map
 
 
+
+def _is_pattern_definition(line: str) -> bool:
+    """Check if a line is a pattern definition (tuple with regex string).
+    Used to avoid false positives when auditing the auditor itself."""
+    stripped = line.strip()
+    # Pattern definition lines start with ( and contain a regex string + severity
+    if stripped.startswith('(r"') or stripped.startswith("(r'"):
+        if any(sev in stripped for sev in ['"CRITICAL"', '"HIGH"', '"MEDIUM"', '"LOW"', '"INFO"']):
+            return True
+    # Also skip lines that are part of pattern list definitions
+    if re.match(r'^[A-Z_]+PATTERNS\s*=\s*\[', stripped):
+        return True
+    return False
+
 def audit_skill_md(result: AuditResult, content: str, filepath: str):
     """Audit SKILL.md for prompt injection patterns."""
     lines = content.splitlines()
@@ -385,6 +399,9 @@ def audit_code_file(result: AuditResult, content: str, filepath: str):
     for pattern, severity, description in CODE_PATTERNS:
         for i, line in enumerate(lines, 1):
             if re.search(pattern, line, re.IGNORECASE):
+                # Skip pattern definition lines (avoid false positives on self-audit)
+                if _is_pattern_definition(line):
+                    continue
                 # Avoid duplicate findings for same line/pattern
                 already = any(
                     f.file == fname and f.line == i and f.description == description

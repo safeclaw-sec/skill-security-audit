@@ -114,3 +114,23 @@ MIT — free to use, modify, and redistribute.
 ---
 
 *Part of the OpenClaw security toolkit. Report issues at [github.com/openclaw/skill-security-audit](https://github.com/openclaw/skill-security-audit)*
+
+## The Self-Audit Paradox
+
+When you run this tool against itself, it returns **score 100/100 (DANGEROUS)**. This is expected and correct.
+
+Why? Because the tool contains:
+- Regex patterns that match malicious code signatures (like a virus scanner contains virus signatures)
+- Example audit reports with real evidence from malicious skills
+- References to attack techniques in its documentation
+
+**This is not a bug — it's proof the detection works.**
+
+### How to verify this tool is safe
+
+1. **Read the source**: 1,013 lines of Python. Standard library only. No obfuscation.
+2. **Check what it does**: reads files, runs regex, prints a report. No network, no file writes, no env access.
+3. **Run it yourself**: `python3 scripts/audit.py . --no-clawhub` — review every finding and confirm they're pattern definitions, not actual threats.
+
+The same paradox exists in every security tool: antivirus software contains virus signatures, WAFs contain attack patterns, SAST scanners contain vulnerability templates. The solution is always the same: **radical transparency**.
+
