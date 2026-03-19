@@ -342,6 +342,13 @@ before use. Monitor its behavior closely. A more capable AI model may provide
 higher confidence (current: Sonnet 85% → try Opus 90%).
 ```
 
+**IMPORTANT: Language Rule — ALWAYS present results in the user's language.**
+Detect the language the user is speaking and present ALL output (analysis breakdown,
+summary, recommendations) in that language. The internal audit data (JSON, scores)
+stays in English, but the human-readable summary MUST match the user's language.
+Examples: if user speaks Portuguese → summary in Portuguese. Spanish → Spanish.
+Japanese → Japanese. Default: English.
+
 **IMPORTANT: Never say "100% safe" or "guaranteed secure".** Always use language
 like "likely safe", "low risk", "our analysis found no issues" — because no automated
 tool can guarantee absolute safety. The score and layer breakdown show HOW we
