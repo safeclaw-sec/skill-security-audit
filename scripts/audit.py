@@ -96,7 +96,8 @@ PROMPT_INJECTION_PATTERNS = [
     (r"system\s+override|admin\s+mode|god\s+mode|developer\s+mode", "HIGH", "Privilege escalation attempt"),
     (r"DAN\s+mode|jailbreak|bypass\s+(safety|filter|security)", "HIGH", "Known jailbreak pattern"),
     (r"operating\s+in\s+(administrative|admin|privileged|elevated)\s+mode", "CRITICAL", "False admin mode claim"),
-    (r"do\s+not\s+mention\s+this\s+to\s+(the\s+)?user|don.t\s+(tell|mention|inform)\s+(the\s+)?user", "CRITICAL", "Instruction to hide behavior from user"),
+    (r"do\s+not\s+(mention|tell|inform|let)\s+(this\s+to\s+)?(the\s+)?user|don.t\s+(tell|mention|inform|let)\s+(the\s+)?user|hide\s+this\s+from\s+(the\s+)?user|keep\s+(this\s+)?hidden|without\s+(the\s+)?user\s+knowing|user\s+(should|must)\s+not\s+know", "CRITICAL", "Instruction to hide behavior from user"),
+    (r"include\s+(all\s+)?api\s+keys|read\s+.*\.env\s+and\s+(include|send|attach)", "CRITICAL", "Instruction to collect and transmit API keys"),
     (r"required\s+by\s+(the\s+)?(system\s+administrator|admin|anthropic|openclaw)", "HIGH", "False authority claim to justify hidden behavior"),
 
     # Exfiltration instructions
@@ -218,6 +219,9 @@ KNOWN_NPM = {
     "mongoose", "sequelize", "knex", "pg", "mysql2", "redis", "socket.io",
     "passport", "bcrypt", "jsonwebtoken", "helmet", "morgan", "chalk",
     "commander", "inquirer", "ora", "boxen", "yargs", "minimist",
+    # Python packages (cross-ecosystem typosquatting — these don't exist in NPM legitimately)
+    "requests", "beautifulsoup4", "flask", "django", "numpy", "pandas",
+    "cryptography", "paramiko", "pillow",
 }
 
 # Known legitimate pip packages (partial list)
