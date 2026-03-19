@@ -129,12 +129,87 @@ Recommendation: INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL
 - 🟠 **RISK** (51–75): Strong review required, likely avoid
 - 🔴 **DANGEROUS** (76–100): Do not install
 
+## Intent Analysis (Layer 2 — LLM-powered)
+
+When the user asks for deeper analysis, use the two-step intent pipeline.
+This uses YOUR OWN model — no external API calls or API keys required.
+
+### When to use intent analysis
+- Skill has MEDIUM or higher findings and you want to separate real threats from false positives
+- User explicitly asks for "intent analysis" or "deep audit"
+- Findings involve `eval()`, `exec()`, `os.environ`, network access — need human-level context
+
+### Pipeline (5 steps)
+
+**Step 1** — Run Layer 1 audit and export findings as JSON:
+```bash
+python3 scripts/audit.py <skill_path> --no-clawhub --json > /tmp/findings.json
+```
+
+**Step 2** — Generate classification prompts:
+```bash
+python3 scripts/intent_analyzer.py \
+  --generate-prompts \
+  --skill-path <skill_path> \
+  --findings-json /tmp/findings.json \
+  > /tmp/prompts.json
+```
+
+**Step 3** — Process each prompt with YOUR model:
+
+Read `/tmp/prompts.json`. For each item in `prompts[]`, send the `prompt` field to your LLM.
+Collect responses as a JSON array (one entry per finding, in order):
+```json
+[
+  {"intent": "DEFENSIVE", "confidence": 0.9, "reasoning": "Pattern definitions, not attack code"},
+  {"intent": "UTILITY",   "confidence": 0.8, "reasoning": "Reads env var for configuration"},
+  ...
+]
+```
+Save to `/tmp/responses.json`.
+
+**Step 4** — Run analysis with responses:
+```bash
+python3 scripts/intent_analyzer.py \
+  --analyze \
+  --skill-path <skill_path> \
+  --findings-json /tmp/findings.json \
+  --responses-json /tmp/responses.json \
+  --model <your-model-name> \
+  > /tmp/intent_report.json
+```
+
+**Step 5** — Present the combined report to the user.
+
+### Intent labels
+| Label | Meaning | Score weight |
+|-------|---------|-------------|
+| MALICIOUS | Deliberately harmful (data theft, backdoor, injection) | 100 |
+| AMBIGUOUS | Unclear intent, could go either way | 50 |
+| UTILITY | Legitimate use of sensitive pattern (config, logging) | 10 |
+| DEFENSIVE | Security tool detecting threats (like antivirus) | 0 |
+| FALSE_POSITIVE | Pattern matched but no actual risk | 0 |
+
+### Combined score formula
+`combined_score = intent_score × 0.67 + anti_evasion_score × 0.33`
+
+Anti-evasion checks (each adds 25 pts):
+- **padding**: >50 consecutive identical lines (context window stuffing)
+- **tail_payload**: >80% of findings in last 20% of file (classic hiding spot)
+- **llm_injection**: injection strings found in code files
+- **obfuscated**: high-entropy blocks >200 chars (base64/hex payloads)
+
+### Supported model names for `--model`
+`opus`, `sonnet`, `haiku`, `gemini-pro`, `gemini-flash`, `gpt-4o`, `deepseek`, `llama-70b`, `unknown`
+
+---
+
 ## Roadmap
 
-### v1.1 (current) — Pattern Matching + Size + Structural
+### v1.1 — Pattern Matching + Size + Structural
 - 6 pattern categories + size alerts + structural analysis
-- 1,500+ lines Python, stdlib only, MIT license
-- Self-audit score: 11/100 SAFE
+- Python stdlib only, MIT license
+- Self-audit score: ~22/100 SAFE
 
 ### v2.0 (planned) — Ephemeral Docker Sandbox
 - Zero-trust execution: `--rm --network none --read-only`
@@ -142,13 +217,12 @@ Recommendation: INSTALL / INSTALL WITH CAUTION / DO NOT INSTALL
 - No residue on host
 - Entropy analysis per section (detect obfuscation)
 
-### v3.0 (planned) — LLM Intent Analysis
-- LLM of the user's choice classifies each finding:
-  - MALICIOUS / DEFENSIVE / AMBIGUOUS / BENIGN
-- Chunked analysis: skill divided into 2k-token blocks
-  - No block large enough to truncate
-  - Attackers can't hide payloads in "dead zones"
-- Confidence scores per model at different context lengths
+### v3.0 (current) — LLM Intent Analysis
+- Uses the agent's own LLM — zero external API dependencies
+- Two-step pipeline: generate-prompts → agent processes → analyze responses
+- Anti-evasion: padding, tail payload, LLM injection, obfuscation detection
+- Model confidence scoring table
+- Combined score: intent (67%) + anti-evasion (33%)
 
 ## Implementation Notes
 
