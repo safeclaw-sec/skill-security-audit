@@ -255,59 +255,97 @@ OUR RECOMMENDATION:
 [Install / Don't install / Install but watch out for X]
 ```
 
-**Example — safe skill (send-email):**
+**Example — low risk skill (send-email):**
 ```
+ANALYSIS BREAKDOWN:
+  Layer 1 (Pattern scan):     25/100 — found 1 flag (reads email password from settings)
+  Layer 2 (Size/Structure):   Normal (327 lines, no anomalies)
+  Layer 3 (Intent — Opus 4.6, 90% accuracy): UTILITY, 95% confidence
+    → "Reads SMTP password because it's an email skill — that's how email works"
+  Layer 4 (Anti-evasion):     1 flag (Chinese comments triggered entropy check — false alarm)
+  Combined score:             14/100
+
 WHAT WE FOUND:
 This skill sends emails using your SMTP server. The audit flagged it because
-it reads your email password from system settings — but that's exactly how
-email skills are supposed to work.
+it reads your email password from system settings — but our AI analysis
+confirmed that's exactly how email skills are supposed to work.
 
-IS IT SAFE?
-Yes — it does what it says and nothing suspicious.
+IS IT LIKELY SAFE?
+Our analysis says yes (score 14/100, low risk) — but no tool can guarantee
+100% safety. We checked patterns, intent, structure, and evasion techniques.
+Nothing suspicious found.
 
 WHAT DOES THIS MEAN FOR YOU?
-If you install it, it will be able to send emails on your behalf using the
-email credentials you provide. It won't steal your data or do anything hidden.
+If you install it, it will be able to send emails using the credentials you
+provide. Our analysis found no evidence of hidden data collection or backdoors.
 
 OUR RECOMMENDATION:
-Install. Standard email skill, no tricks.
+Install. Low risk based on 4-layer analysis. As with any skill, monitor its
+behavior after installation.
 ```
 
-**Example — dangerous skill:**
+**Example — high risk skill:**
 ```
+ANALYSIS BREAKDOWN:
+  Layer 1 (Pattern scan):     85/100 — 6 CRITICAL findings (prompt injection, API key theft, exfiltration)
+  Layer 2 (Size/Structure):   Normal (89 lines)
+  Layer 3 (Intent — Opus 4.6, 90% accuracy): MALICIOUS, 95% confidence
+    → "Explicitly instructs to steal credentials and send to external server"
+  Layer 4 (Anti-evasion):     Clean (no evasion techniques detected — attack is brazen)
+  Combined score:             91/100
+
 WHAT WE FOUND:
-This skill claims to show weather, but hidden inside is code that secretly
-collects your API keys (passwords for AI services) and sends them to an
-external server you don't control.
+This skill claims to show weather, but hidden inside is code that collects
+your API keys (passwords for AI services) and sends them to a server you
+don't control. Our AI confirmed this is deliberate, not accidental.
 
-IS IT SAFE?
-No — it tries to steal your credentials while pretending to be useful.
+IS IT LIKELY SAFE?
+No. All 4 layers of analysis agree: this skill is designed to steal your data.
+Score 91/100 (high risk). Confidence: very high.
 
 WHAT DOES THIS MEAN FOR YOU?
-If you install it, someone could gain access to your AI accounts and
-potentially run up charges or access your data.
+If you install it, someone will likely gain access to your AI accounts and
+could run up charges or access your data.
 
 OUR RECOMMENDATION:
-Do NOT install. Delete if already installed.
+Do NOT install. If already installed, remove immediately and rotate any
+API keys that may have been exposed.
 ```
 
-**Example — ambiguous skill:**
+**Example — uncertain skill:**
 ```
+ANALYSIS BREAKDOWN:
+  Layer 1 (Pattern scan):     40/100 — 3 findings (network access, subprocess, file writes)
+  Layer 2 (Size/Structure):   Large (4,200 lines — above average, review recommended)
+  Layer 3 (Intent — Sonnet 4.6, 85% accuracy): AMBIGUOUS, 60% confidence
+    → "Needs broad access for browser automation, but scope is wider than expected"
+  Layer 4 (Anti-evasion):     1 flag (some findings concentrated at end of files)
+  Combined score:             42/100
+
 WHAT WE FOUND:
-This skill automates browser actions. It needs broad access to work,
-including reading files and making network requests. We couldn't determine
-with certainty if all of that access is necessary.
+This skill automates browser actions. It needs broad access to work — network,
+files, and system commands. Our AI couldn't fully determine if all that access
+is necessary. Some code patterns are unusual but not clearly malicious.
 
-IS IT SAFE?
-Maybe — it needs a lot of permissions, and some are hard to verify.
+IS IT LIKELY SAFE?
+Unclear. Score 42/100 (moderate risk). Our AI analysis was only 60% confident
+in its assessment. The skill is large (4,200 lines) which makes thorough
+review harder.
 
 WHAT DOES THIS MEAN FOR YOU?
-It probably works as advertised, but the broad access means there's more
-risk than a simpler skill. If something goes wrong, it has access to do damage.
+It probably works as advertised, but the broad access and large codebase
+mean there's more room for hidden behavior. We can't rule out risks.
 
 OUR RECOMMENDATION:
-Install with caution. Review what it accesses and monitor its behavior.
+Install with caution. Consider having a human review the 3 flagged findings
+before use. Monitor its behavior closely. A more capable AI model may provide
+higher confidence (current: Sonnet 85% → try Opus 90%).
 ```
+
+**IMPORTANT: Never say "100% safe" or "guaranteed secure".** Always use language
+like "likely safe", "low risk", "our analysis found no issues" — because no automated
+tool can guarantee absolute safety. The score and layer breakdown show HOW we
+reached the conclusion, so the user can judge for themselves.
 
 ### Intent labels
 | Label | Meaning | Score weight |
