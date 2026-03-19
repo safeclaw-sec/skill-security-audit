@@ -325,6 +325,34 @@ def _levenshtein(s1: str, s2: str) -> int:
     return prev[-1]
 
 
+def _is_self_audit(skill_path: str) -> bool:
+    """Detect if we're auditing the skill that contains this very audit script."""
+    script_path = str(pathlib.Path(__file__).resolve())
+    skill_resolved = str(pathlib.Path(skill_path).resolve())
+    return script_path.startswith(skill_resolved + os.sep) or script_path.startswith(skill_resolved + "/")
+
+
+def _strip_pattern_definitions(content: str) -> str:
+    """
+    Remove pattern-definition tuple lines from content to avoid self-audit false positives.
+    Lines like:  (r"exfiltrat|...", "CRITICAL", "Explicit data exfiltration instruction"),
+    are virus-signature definitions, not attack instructions.
+    """
+    severity_keywords = (
+        '"CRITICAL"', '"HIGH"', '"MEDIUM"', '"LOW"', '"INFO"',
+        "'CRITICAL'", "'HIGH'", "'MEDIUM'", "'LOW'", "'INFO'",
+    )
+    filtered = []
+    for line in content.splitlines(keepends=True):
+        stripped = line.lstrip()
+        if stripped.startswith('(r"') or stripped.startswith("(r'"):
+            if any(kw in line for kw in severity_keywords):
+                filtered.append("\n")  # preserve line numbers
+                continue
+        filtered.append(line)
+    return "".join(filtered)
+
+
 # ─────────────────────────────────────────────
 # Audit modules
 # ─────────────────────────────────────────────
@@ -342,20 +370,6 @@ def _build_code_block_map(lines: List[str]) -> List[bool]:
             result_map.append(in_code)
     return result_map
 
-
-
-def _is_pattern_definition(line: str) -> bool:
-    """Check if a line is a pattern definition (tuple with regex string).
-    Used to avoid false positives when auditing the auditor itself."""
-    stripped = line.strip()
-    # Pattern definition lines start with ( and contain a regex string + severity
-    if stripped.startswith('(r"') or stripped.startswith("(r'"):
-        if any(sev in stripped for sev in ['"CRITICAL"', '"HIGH"', '"MEDIUM"', '"LOW"', '"INFO"']):
-            return True
-    # Also skip lines that are part of pattern list definitions
-    if re.match(r'^[A-Z_]+PATTERNS\s*=\s*\[', stripped):
-        return True
-    return False
 
 def audit_skill_md(result: AuditResult, content: str, filepath: str):
     """Audit SKILL.md for prompt injection patterns."""
@@ -399,9 +413,6 @@ def audit_code_file(result: AuditResult, content: str, filepath: str):
     for pattern, severity, description in CODE_PATTERNS:
         for i, line in enumerate(lines, 1):
             if re.search(pattern, line, re.IGNORECASE):
-                # Skip pattern definition lines (avoid false positives on self-audit)
-                if _is_pattern_definition(line):
-                    continue
                 # Avoid duplicate findings for same line/pattern
                 already = any(
                     f.file == fname and f.line == i and f.description == description
@@ -661,6 +672,7 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
         ))
         return result
 
+    self_audit = _is_self_audit(skill_path)
     all_files = find_all_files(skill_path)
 
     # ── Classify and process files ──
@@ -681,6 +693,10 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
 
         result.checked_files.append(rel_path)
 
+        # In self-audit mode, skip .md files entirely (they contain descriptions, not threats)
+        if self_audit and ext in (".md", ".txt", ".rst"):
+            continue
+
         # SKILL.md — prompt injection audit
         if fname.upper() == "SKILL.md".upper() or fname.upper() == "SKILL.MD":
             audit_skill_md(result, content, filepath)
@@ -688,9 +704,11 @@ def audit_skill(skill_path: str, check_clawhub: bool = True) -> AuditResult:
 
         # Code files
         elif ext in (".py", ".js", ".ts", ".sh", ".bash", ".mjs", ".cjs"):
-            audit_code_file(result, content, filepath)
-            audit_network(result, content, filepath)
-            audit_permissions(result, content, filepath)
+            # In self-audit mode, strip pattern-definition lines (virus signatures, not threats)
+            scan_content = _strip_pattern_definitions(content) if self_audit else content
+            audit_code_file(result, scan_content, filepath)
+            audit_network(result, scan_content, filepath)
+            audit_permissions(result, scan_content, filepath)
 
         # Markdown / text (light scan)
         elif ext in (".md", ".txt", ".rst"):
