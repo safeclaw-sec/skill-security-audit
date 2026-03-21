@@ -142,6 +142,26 @@ These were removed from ClawHub:
 | `email-daily-summary` | Prompt Injection | Hidden instructions to forward emails |
 | `browser-automation` | Network Exposure | CDP port exposed to all interfaces |
 
+## Why SafeClaw?
+
+| Feature | SafeClaw | ClawSecure | Bitdefender | VirusTotal |
+|---------|----------|-----------|-------------|------------|
+| Hash-based dynamic tags | Yes | No | No | No |
+| Sandbox cascade (Docker/bwrap/firejail) | Yes | No | No | No |
+| 100% offline | Yes | No | No | No |
+| Zero dependencies | Yes (Python stdlib) | No | No | No |
+| Self-audit | Yes | No | No | No |
+| OWASP ASI coverage | Partial | 10/10 | N/A | N/A |
+| Web scanner | No | Yes | Yes | Yes |
+
+## Built with OpenClaw
+
+SafeClaw was designed, coded, and tested entirely within an OpenClaw agent environment.
+The agent analyzed the threat landscape, wrote the detection logic, built the sandbox
+cascade, and even audits itself. Human direction and security expertise guided every decision.
+
+This is what AI agents building for AI agents looks like.
+
 ## License
 
 MIT — free to use, modify, and redistribute.

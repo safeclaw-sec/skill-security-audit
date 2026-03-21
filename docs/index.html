@@ -7,7 +7,7 @@
 <title>SafeClaw — Audit Before You Install</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -33,10 +33,18 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 16px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    html { scroll-behavior: auto; }
   }
 
   /* ── NAV ── */
@@ -129,9 +137,9 @@
     color: var(--safe);
     margin-bottom: 12px;
   }
-  h1 { font-size: clamp(36px, 6vw, 72px); font-weight: 900; line-height: 1.05; letter-spacing: -2px; }
-  h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
-  h3 { font-size: 20px; font-weight: 700; }
+  h1 { font-family: 'Syne', sans-serif; font-size: clamp(36px, 6vw, 72px); font-weight: 900; line-height: 1.05; letter-spacing: -2px; }
+  h2 { font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 48px); font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+  h3 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; }
   h4 { font-size: 16px; font-weight: 600; }
   p { color: var(--text-muted); line-height: 1.75; }
 
@@ -189,6 +197,7 @@
     border-radius: var(--radius-lg);
     padding: 28px;
     transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+    cursor: default;
   }
   .card:hover {
     background: var(--glass-hover);
@@ -711,11 +720,11 @@
     .sandbox-cmd { font-size: 12px; padding: 14px 16px; }
     p, .layer-list li, .vaccine-points li, .step p, .roadmap-desc,
     .sandbox-card p, .mobile-card-body, .catch-item, td, .footer-desc,
-    .footer-copy { font-size: 15px; }
+    .footer-copy { font-size: 16px; }
     .section-label { font-size: 12px; }
-    .footer-links a { font-size: 15px; }
-    .mobile-card-body { font-size: 15px; }
-    body { font-size: 15px; }
+    .footer-links a { font-size: 16px; }
+    .mobile-card-body { font-size: 16px; }
+    body { font-size: 16px; }
   }
 
   @media (max-width: 480px) {
@@ -788,6 +797,30 @@
 </section>
 
 <!-- ══════════════════════════════════════════════════
+     1.5 BUILT WITH OPENCLAW
+══════════════════════════════════════════════════ -->
+<section id="built-with" aria-labelledby="built-with-heading" style="padding: 48px 0; background: linear-gradient(135deg, rgba(0,255,136,0.04) 0%, rgba(68,136,255,0.04) 100%); border-top: 1px solid rgba(0,255,136,0.15); border-bottom: 1px solid rgba(68,136,255,0.1);">
+  <div class="container">
+    <div style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+      <div style="flex-shrink:0;">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <rect width="48" height="48" rx="12" fill="rgba(0,255,136,0.1)" stroke="rgba(0,255,136,0.3)" stroke-width="1.5"/>
+          <path d="M14 24l7 7 13-14" stroke="var(--safe)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="24" cy="24" r="12" stroke="rgba(0,255,136,0.4)" stroke-width="1" fill="none"/>
+        </svg>
+      </div>
+      <div style="flex:1; min-width:260px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
+          <span style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--safe);">Built with OpenClaw</span>
+          <span class="badge badge-safe" style="font-size:11px;">Human + AI</span>
+        </div>
+        <p id="built-with-heading" style="font-size:14px; color:var(--text-muted); line-height:1.6; margin:0; max-width:680px;">SafeClaw was designed, coded, and tested entirely within an OpenClaw agent environment. Human direction and security expertise guided every decision.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
      2. THE PROBLEM
 ══════════════════════════════════════════════════ -->
 <section id="problem" aria-labelledby="problem-heading">
@@ -803,17 +836,23 @@
     </div>
     <div class="grid-3">
       <div class="card glow-danger" role="article">
-        <div style="font-size: 40px; margin-bottom: 16px;" aria-hidden="true">☠️</div>
+        <div style="margin-bottom: 16px;" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><line x1="12" y1="22" x2="12" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="var(--danger)" stroke-width="2"/></svg>
+        </div>
         <h3 class="text-danger mb-8">824+ Malicious</h3>
         <p style="font-size:14px;">Skills confirmed malicious in the ClawHavoc campaign — and counting. Each one looks like a productivity tool.</p>
       </div>
       <div class="card glow-caution" role="article">
-        <div style="font-size: 40px; margin-bottom: 16px;" aria-hidden="true">🎯</div>
+        <div style="margin-bottom: 16px;" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--caution)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
         <h3 class="text-caution mb-8">1 Campaign</h3>
         <p style="font-size:14px;">A coordinated supply chain attack targeting LLM agent ecosystems. Atomic Stealer, credential theft, data exfiltration.</p>
       </div>
       <div class="card glow-safe" role="article">
-        <div style="font-size: 40px; margin-bottom: 16px;" aria-hidden="true">🛡️</div>
+        <div style="margin-bottom: 16px;" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--safe)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
         <h3 class="text-safe mb-8">0 Protection</h3>
         <p style="font-size:14px;">Default install flow has no security checks. No sandboxing. No intent analysis. SafeClaw changes that — for free.</p>
       </div>
@@ -870,7 +909,7 @@
 
       <!-- Layer 1 -->
       <div class="card layer-card glow-safe" role="article" aria-labelledby="layer1-title">
-        <span class="layer-icon" aria-hidden="true">🔍</span>
+        <span class="layer-icon" aria-hidden="true"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--safe)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <p class="layer-num">Layer 1</p>
         <h3 id="layer1-title">Pattern Matching</h3>
         <p style="font-size:14px; margin-bottom:8px;">Static analysis. No LLM needed. Runs in milliseconds.</p>
@@ -887,7 +926,7 @@
 
       <!-- Layer 2 -->
       <div class="card layer-card glow-info" role="article" aria-labelledby="layer2-title">
-        <span class="layer-icon" aria-hidden="true">📏</span>
+        <span class="layer-icon" aria-hidden="true"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span>
         <p class="layer-num">Layer 2</p>
         <h3 id="layer2-title">Size &amp; Structure</h3>
         <p style="font-size:14px; margin-bottom:8px;">Structural heuristics. Size as a signal, not a fact.</p>
@@ -902,7 +941,7 @@
 
       <!-- Layer 3 -->
       <div class="card layer-card glow-caution" role="article" aria-labelledby="layer3-title">
-        <span class="layer-icon" aria-hidden="true">🧠</span>
+        <span class="layer-icon" aria-hidden="true"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--caution)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg></span>
         <p class="layer-num">Layer 3</p>
         <h3 id="layer3-title">LLM Intent Analysis</h3>
         <p style="font-size:14px; margin-bottom:8px;">Semantic analysis with your own LLM. No external API calls.</p>
@@ -919,7 +958,7 @@
 
       <!-- Layer 4 -->
       <div class="card layer-card glow-danger" role="article" aria-labelledby="layer4-title">
-        <span class="layer-icon" aria-hidden="true">🕵️</span>
+        <span class="layer-icon" aria-hidden="true"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
         <p class="layer-num">Layer 4</p>
         <h3 id="layer4-title">Anti-Evasion</h3>
         <p style="font-size:14px; margin-bottom:8px;">Catches skills that try to hide from security tools.</p>
@@ -938,7 +977,7 @@
     <!-- Hash-Based Dynamic Tags feature highlight -->
     <div class="card glow-safe mt-32" role="article" style="border-color:rgba(0,255,136,0.25);background:rgba(0,255,136,0.04);">
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-        <span style="font-size:36px;" aria-hidden="true">🔐</span>
+        <span aria-hidden="true"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--safe)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="var(--safe)"/></svg></span>
         <div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <h3 style="color:var(--safe);margin:0;">Hash-Based Dynamic Tags</h3>
@@ -983,22 +1022,22 @@
     </div>
     <div class="sandbox-grid" role="list">
       <div class="card sandbox-card glow-danger" role="listitem">
-        <span class="sandbox-icon" aria-hidden="true">🚫</span>
+        <span class="sandbox-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>
         <h4>No Network</h4>
         <p>Complete network isolation. No DNS. No exfiltration. No callbacks.</p>
       </div>
       <div class="card sandbox-card glow-info" role="listitem">
-        <span class="sandbox-icon" aria-hidden="true">🔒</span>
+        <span class="sandbox-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
         <h4>Read Only</h4>
         <p>Filesystem mounted read-only. No writes. No persistence. No drops.</p>
       </div>
       <div class="card sandbox-card glow-caution" role="listitem">
-        <span class="sandbox-icon" aria-hidden="true">💨</span>
+        <span class="sandbox-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--caution)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span>
         <h4>Auto-Destruct</h4>
         <p>Container deleted on exit. <code>--rm</code> by default. Zero state survives.</p>
       </div>
       <div class="card sandbox-card glow-safe" role="listitem">
-        <span class="sandbox-icon" aria-hidden="true">🌐</span>
+        <span class="sandbox-icon" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--safe)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
         <h4>Multi-Platform</h4>
         <p>Docker · bubblewrap · firejail · sandbox-exec (macOS). Auto-detected.</p>
       </div>
@@ -1482,7 +1521,8 @@ safeclaw audit weather <span class="cmd-flag">--sandbox</span> <span class="cmd-
       <span style="font-size:13px;color:var(--text-muted);">🔒 <strong style="color:var(--safe);">Security Disclosure</strong> — Found a vulnerability? Report it responsibly:</span>
       <a href="mailto:ShieldClaw@proton.me" style="color:var(--safe);font-size:13px;font-weight:600;margin-left:8px;text-decoration:none;">ShieldClaw@proton.me</a>
     </div>
-    <p class="footer-copy">Built by SafeClaw Security · MIT License · No tracking · No analytics · No cookies</p>
+    <p class="footer-copy" style="margin-bottom:8px;">Built with OpenClaw by a human-AI team.</p>
+    <p class="footer-copy">SafeClaw Security · MIT License · No tracking · No analytics · No cookies</p>
   </div>
 </footer>
 
