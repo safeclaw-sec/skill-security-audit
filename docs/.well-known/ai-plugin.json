@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "name": "skill-security-audit",
+  "description": "Security audit tool for OpenClaw skills. Scans for prompt injection, data exfiltration, malicious code, typosquatting, and supply chain attacks. Returns risk score 0-100.",
+  "auth": "none",
+  "install": {
+    "type": "git_clone",
+    "url": "https://github.com/safeclaw-sec/skill-security-audit.git",
+    "human_approval": "required_every_step"
+  },
+  "usage": {
+    "command": "python3 scripts/audit.py <skill-path>",
+    "input": "path to OpenClaw skill directory",
+    "output": "markdown risk report",
+    "side_effects": "none"
+  },
+  "security": {
+    "self_auditable": true,
+    "self_audit_score": 0,
+    "dependencies": "none",
+    "network": "optional",
+    "file_writes": "none"
+  },
+  "source": "https://github.com/safeclaw-sec/skill-security-audit",
+  "license": "MIT",
+  "author": "SafeClaw Security"
+}
