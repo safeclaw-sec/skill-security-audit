@@ -97,6 +97,41 @@ Use in CI: `python3 scripts/audit.py my-skill || echo "Skill failed security che
 6. **ClawHub** → optionally looks up author reputation (requires network)
 7. **Generates** a scored Markdown report with findings, checklist, and recommendation
 
+## Security: Hash-Based Dynamic Tags
+
+When the auditor wraps untrusted skill content for LLM analysis, it uses **session-scoped dynamic tags** instead of fixed strings.
+
+Each audit run generates a unique 12-character hex token (SHA-256 of `os.urandom(32)`), producing tags like:
+
+```
+<<SAFECLAW_a7f3b2c91e04>>
+<<UNTRUSTED_BEGIN_a7f3b2c91e04>>
+...content...
+<<UNTRUSTED_END_a7f3b2c91e04>>
+```
+
+**Why this matters:** If tags were fixed (e.g. `<<SAFECLAW_UNTRUSTED_END>>`), an attacker could plant that exact string inside a malicious skill to "escape" the safety wrapper. With dynamic tags, the attacker would need to guess a random token from 281 trillion possible combinations — per audit session.
+
+## Sandbox Execution
+
+The auditor supports isolated execution via multiple sandbox backends (auto-detected):
+
+| Backend | Isolation | Requirements |
+|---------|-----------|-------------|
+| **Docker** | Strongest — no network, read-only FS, 256MB RAM, 0.5 CPU | Docker + `safeclaw-auditor` image |
+| **Bubblewrap** | Good — namespace isolation, no network | `bwrap` installed |
+| **Firejail** | Good — process isolation, no network | `firejail` installed |
+| **sandbox-exec** | macOS only | macOS |
+| **Fallback** | None — runs directly | Always available |
+
+```bash
+# Run audit in sandbox (auto-selects best available)
+python3 scripts/sandbox.py /path/to/skill/
+
+# Build Docker image first
+bash scripts/build-sandbox.sh
+```
+
 ## Real Malicious Skills Examples
 
 These were removed from ClawHub:
@@ -113,4 +148,4 @@ MIT — free to use, modify, and redistribute.
 
 ---
 
-*Part of the OpenClaw security toolkit. Report issues at [github.com/openclaw/skill-security-audit](https://github.com/openclaw/skill-security-audit)*
+*SafeClaw Security — [github.com/safeclaw-sec/skill-security-audit](https://github.com/safeclaw-sec/skill-security-audit)*
