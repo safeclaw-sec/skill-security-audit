@@ -1,0 +1,2 @@
+*.backup-pre-hash
+__pycache__/
