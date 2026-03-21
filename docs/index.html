@@ -86,6 +86,30 @@
   }
   .nav-links a:hover { color: var(--text); background: var(--glass); }
 
+  /* ── HAMBURGER ── */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 4px;
+    z-index: 110;
+    flex-shrink: 0;
+  }
+  .hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: transform 0.3s, opacity 0.3s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
   /* ── LAYOUT ── */
   .container {
     max-width: 1100px;
@@ -643,10 +667,28 @@
   @media (max-width: 768px) {
     section { padding: 56px 0; }
     .container { padding: 0 16px; }
-    nav .nav-links { display: none; }
+    .hamburger { display: flex; }
+    nav .nav-links {
+      display: none;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      background: rgba(10,10,15,0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      flex-direction: column;
+      padding: 16px 24px 24px;
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      gap: 4px;
+    }
+    nav .nav-links.mobile-open { display: flex; }
+    nav .nav-links a { font-size: 16px; padding: 12px 14px; border-radius: 10px; }
 
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     .layers-grid { grid-template-columns: 1fr; }
+    .hash-tag-grid { grid-template-columns: 1fr !important; }
     .sandbox-grid { grid-template-columns: repeat(2, 1fr); }
     .vaccine-grid { grid-template-columns: 1fr; }
     .vaccine-catches { grid-template-columns: 1fr; }
@@ -664,9 +706,16 @@
     .desktop-table { display: none !important; }
     .mobile-cards { display: block; }
 
-    .output-content { font-size: 11px; padding: 16px; }
-    .code-block pre { font-size: 11px; }
-    .sandbox-cmd { font-size: 11px; padding: 14px 16px; }
+    .output-content { font-size: 12px; padding: 16px; }
+    .code-block pre { font-size: 12px; }
+    .sandbox-cmd { font-size: 12px; padding: 14px 16px; }
+    p, .layer-list li, .vaccine-points li, .step p, .roadmap-desc,
+    .sandbox-card p, .mobile-card-body, .catch-item, td, .footer-desc,
+    .footer-copy { font-size: 15px; }
+    .section-label { font-size: 12px; }
+    .footer-links a { font-size: 15px; }
+    .mobile-card-body { font-size: 15px; }
+    body { font-size: 15px; }
   }
 
   @media (max-width: 480px) {
@@ -675,6 +724,7 @@
     .hero-cta .btn { width: 100%; justify-content: center; }
     .sandbox-grid { grid-template-columns: 1fr; }
     .score-display { flex-direction: column; text-align: center; gap: 8px; }
+    .hash-tag-grid { grid-template-columns: 1fr !important; }
   }
 </style>
 </head>
@@ -684,13 +734,14 @@
 <nav aria-label="Main navigation">
   <div class="nav-inner">
     <a href="#hero" class="nav-logo">Safe<span>Claw</span></a>
-    <ul class="nav-links" role="list">
-      <li><a href="#problem">Problem</a></li>
+    <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false" aria-controls="nav-links-list">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="nav-links-list" role="list">
+      <li><a href="#layers">Features</a></li>
       <li><a href="#how-it-works">How It Works</a></li>
-      <li><a href="#layers">4 Layers</a></li>
-      <li><a href="#sandbox">Sandbox</a></li>
-      <li><a href="#models">Models</a></li>
-      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <li><a href="#quickstart">Install</a></li>
       <li><a href="https://github.com/safeclaw-sec/skill-security-audit" target="_blank" rel="noopener" aria-label="GitHub repository">GitHub ↗</a></li>
     </ul>
   </div>
@@ -883,6 +934,40 @@
       </div>
 
     </div>
+
+    <!-- Hash-Based Dynamic Tags feature highlight -->
+    <div class="card glow-safe mt-32" role="article" style="border-color:rgba(0,255,136,0.25);background:rgba(0,255,136,0.04);">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+        <span style="font-size:36px;" aria-hidden="true">🔐</span>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3 style="color:var(--safe);margin:0;">Hash-Based Dynamic Tags</h3>
+            <span class="badge badge-safe" style="font-size:11px;">New in v3.0</span>
+          </div>
+          <p style="font-size:15px;margin-top:4px;">Session-scoped dynamic tags — attackers can't predict encapsulation markers</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="hash-tag-grid">
+        <div>
+          <p style="font-size:14px;margin-bottom:12px;">Every audit session generates a unique 12-character hex token derived from SHA-256. The encapsulation markers are unpredictable — making it impossible for a malicious skill to pre-craft an escape sequence.</p>
+          <ul class="layer-list" aria-label="Hash-Based Dynamic Tags features">
+            <li>281 trillion possible combinations per session</li>
+            <li>Tokens derived via SHA-256 — cryptographically secure</li>
+            <li>Rotates on every audit — no reuse across sessions</li>
+            <li>Breaks hardcoded marker-escape attacks cold</li>
+          </ul>
+        </div>
+        <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,136,0.2);border-radius:var(--radius);padding:18px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:2;">
+          <span style="color:var(--text-muted);"># Static (predictable — attackable)</span><br>
+          <span style="color:var(--danger);">&lt;&lt;SAFECLAW_UNTRUSTED_BEGIN&gt;&gt;</span><br><br>
+          <span style="color:var(--text-muted);"># Dynamic (session-scoped — safe)</span><br>
+          <span style="color:var(--safe);">&lt;&lt;SAFECLAW_a3f9c12e_BEGIN&gt;&gt;</span><br>
+          <span style="color:var(--text-muted);">  [skill content — can't predict tag]</span><br>
+          <span style="color:var(--safe);">&lt;&lt;SAFECLAW_a3f9c12e_END&gt;&gt;</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -1142,12 +1227,15 @@
     <div class="self-audit-note" role="note">
       <strong>"A security tool you can't audit is a security risk itself."</strong><br>
       SafeClaw runs its own audit on every release. Here are the actual v3.0 results — unfiltered.
+      The score below reflects SafeClaw auditing <em>itself</em>: every finding has a legitimate reason (an installer needs curl, a scanner needs to read files, a vaccine contains the patterns it blocks).
+      A score of 42 on a security tool is expected — not a red flag. <strong>The transparency is the point.</strong>
     </div>
     <div class="score-display" role="status" aria-label="Self-audit score: 42 out of 100, CAUTION">
       <div class="score-num">42</div>
       <div class="score-detail">
         <strong>CAUTION</strong>
         out of 100 · 6 findings · v3.0
+        <span style="display:block;margin-top:4px;font-size:12px;color:var(--text-muted);">Real self-audit result — transparency, not a defect.</span>
       </div>
     </div>
 
@@ -1390,11 +1478,40 @@ safeclaw audit weather <span class="cmd-flag">--sandbox</span> <span class="cmd-
       <a href="https://github.com/safeclaw-sec/skill-security-audit/issues" target="_blank" rel="noopener" role="listitem">Report Issue</a>
       <a href="https://github.com/safeclaw-sec/skill-security-audit/blob/main/CHANGELOG.md" target="_blank" rel="noopener" role="listitem">Changelog</a>
     </div>
+    <div style="margin-bottom:20px;padding:14px 20px;background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:var(--radius);display:inline-block;">
+      <span style="font-size:13px;color:var(--text-muted);">🔒 <strong style="color:var(--safe);">Security Disclosure</strong> — Found a vulnerability? Report it responsibly:</span>
+      <a href="mailto:ShieldClaw@proton.me" style="color:var(--safe);font-size:13px;font-weight:600;margin-left:8px;text-decoration:none;">ShieldClaw@proton.me</a>
+    </div>
     <p class="footer-copy">Built by SafeClaw Security · MIT License · No tracking · No analytics · No cookies</p>
   </div>
 </footer>
 
 <script>
+  // Hamburger menu
+  const hamburger = document.getElementById('hamburger');
+  const navLinksList = document.getElementById('nav-links-list');
+  hamburger.addEventListener('click', function() {
+    const isOpen = navLinksList.classList.toggle('mobile-open');
+    hamburger.classList.toggle('open', isOpen);
+    hamburger.setAttribute('aria-expanded', isOpen);
+  });
+  // Close menu on link click
+  navLinksList.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      navLinksList.classList.remove('mobile-open');
+      hamburger.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+  });
+  // Close menu on outside click
+  document.addEventListener('click', function(e) {
+    if (!hamburger.contains(e.target) && !navLinksList.contains(e.target)) {
+      navLinksList.classList.remove('mobile-open');
+      hamburger.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+    }
+  });
+
   // Smooth scroll for anchor links (native behavior + polyfill for older Safari)
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
