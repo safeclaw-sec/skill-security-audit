@@ -4,15 +4,18 @@
 
 ## Install
 
+**From ClawHub (when available):**
 ```bash
-# Install directly from GitHub
-openclaw skills install --url https://github.com/safeclaw-sec/skill-security-audit
-
-# Or install from ClawHub
 clawhub install safeclaw-security-audit
 ```
 
-> **Note:** If ClawHub install is temporarily unavailable, use the direct GitHub URL above.
+**Direct install from GitHub:**
+```bash
+git clone https://github.com/safeclaw-sec/skill-security-audit \
+  ~/.openclaw/workspace/skills/skill-security-audit
+```
+
+> **Note:** If ClawHub install is temporarily blocked (false positive), use the direct GitHub clone above.
 
 ## Why This Exists
 
