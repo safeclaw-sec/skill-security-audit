@@ -2,6 +2,18 @@
 
 **OpenClaw Skill Security Auditor** — Automatically audits any OpenClaw skill for security risks before installation.
 
+## Install
+
+```bash
+# Install directly from GitHub
+openclaw skills install --url https://github.com/safeclaw-sec/skill-security-audit
+
+# Or install from ClawHub
+clawhub install safeclaw-security-audit
+```
+
+> **Note:** If ClawHub install is temporarily unavailable, use the direct GitHub URL above.
+
 ## Why This Exists
 
 In February 2026, 341 malicious skills were discovered on ClawHub in a coordinated supply chain attack. This tool automates the security audit process, checking all known attack vectors so you don't have to do it manually.
